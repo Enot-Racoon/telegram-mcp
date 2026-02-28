@@ -2,8 +2,9 @@ import { eq, and, gte, lte, desc, count, type SQL, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
 import { v4 as uuidv4 } from "uuid";
-import { logs as logsTable, type Log } from "../database/schema";
-import type { LogEntry, LogQueryOptions } from "../../types";
+
+import { logs as logsTable, type Log } from "~/core/database";
+import type { LogEntry, LogQueryOptions } from "~/types";
 
 /**
  * Logger level priority

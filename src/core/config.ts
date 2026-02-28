@@ -1,6 +1,7 @@
 import os from "node:os";
 import path from "node:path";
-import type { Config } from "../../types";
+
+import type { Config } from "~/types";
 
 const DEFAULT_CONFIG: Config = {
   databasePath: path.join(os.homedir(), ".telegram-mcp", "telegram.db"),

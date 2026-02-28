@@ -1,4 +1,5 @@
-import type { Chat, Message } from "../types";
+import type { Chat, Message } from "~/types";
+
 import type { TelegramProvider } from "./TelegramProvider";
 
 /**

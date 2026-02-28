@@ -2,11 +2,12 @@ import { eq, desc, count } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
 import { v4 as uuidv4 } from "uuid";
+
 import {
   sessions as sessionsTable,
   type Session as SessionRow,
-} from "../core/database/schema";
-import type { Account, AccountStatus, Session } from "../types";
+} from "~/core/database";
+import type { Account, AccountStatus, Session } from "~/types";
 
 /**
  * Account manager for handling Telegram account sessions using Drizzle ORM

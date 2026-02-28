@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { TelegramMCPServer } from "./server";
-import { getConfig, ensureDatabaseDirectory } from "./core/config";
+import { TelegramMCPServer } from "~/server";
+import { getConfig, ensureDatabaseDirectory } from "~/core/config";
 
 /**
  * Print help message

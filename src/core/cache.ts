@@ -1,8 +1,9 @@
 import { eq, like, lt, count, sum, type SQL, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
-import { cache as cacheTable } from "../database/schema";
-import type { CacheStats } from "../../types";
+
+import { cache as cacheTable } from "~/core/database";
+import type { CacheStats } from "~/types";
 
 /**
  * Cache manager using Drizzle ORM with SQLite storage

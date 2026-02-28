@@ -1,8 +1,11 @@
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import Database from 'better-sqlite3';
-import fs from 'node:fs';
-import path from 'node:path';
-import * as schema from './schema';
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import Database from "better-sqlite3";
+import fs from "node:fs";
+import path from "node:path";
+
+import * as schema from "./schema";
+
+export * from "./schema";
 
 /**
  * Initialize the SQLite database with Drizzle ORM
@@ -17,7 +20,7 @@ export function initializeDatabase(dbPath: string): Database.Database {
   const db = new Database(dbPath);
 
   // Enable WAL mode for better concurrency
-  db.pragma('journal_mode = WAL');
+  db.pragma("journal_mode = WAL");
 
   return db;
 }

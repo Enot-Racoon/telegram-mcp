@@ -4,13 +4,14 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import type { Config } from "./types";
-import { Logger } from "./core/logging";
-import { CacheManager } from "./core/cache";
-import { AccountManager } from "./accounts/AccountManager";
-import { MockTelegramProvider } from "./telegram/MockTelegramProvider";
-import { TelegramService } from "./telegram/TelegramService";
-import { getDatabase, closeDatabase } from "./core/database";
+
+import type { Config } from "~/types";
+import { Logger } from "~/core/logging";
+import { CacheManager } from "~/core/cache";
+import { AccountManager } from "~/accounts/AccountManager";
+import { MockTelegramProvider } from "~/telegram/MockTelegramProvider";
+import { TelegramService } from "~/telegram/TelegramService";
+import { getDatabase, closeDatabase } from "~/core/database";
 
 /**
  * Telegram MCP Server
