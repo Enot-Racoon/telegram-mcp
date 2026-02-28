@@ -1,5 +1,8 @@
-import type Database from 'better-sqlite3';
+import { eq, and, gte, lte, desc, count, type SQL, inArray } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import Database from 'better-sqlite3';
 import { v4 as uuidv4 } from 'uuid';
+import { logs as logsTable, type Log } from '../database/schema.js';
 import type { LogEntry, LogQueryOptions } from '../../types/index.js';
 
 /**
@@ -14,16 +17,29 @@ const LOG_LEVELS = {
 
 type LogLevel = keyof typeof LOG_LEVELS;
 
+interface LogContext {
+  tool?: string;
+  action?: string;
+  arguments?: Record<string, unknown>;
+  result?: unknown;
+  error?: string;
+  duration?: number;
+  sessionId?: string;
+  projectId?: string;
+  serverId?: string;
+  metadata?: Record<string, unknown>;
+}
+
 /**
- * Structured logger with SQLite storage
+ * Structured logger with Drizzle ORM and SQLite storage
  */
 export class Logger {
-  private db: Database.Database;
+  private db: ReturnType<typeof drizzle>;
   private minLevel: LogLevel;
   private serverId: string;
 
   constructor(db: Database.Database, minLevel: LogLevel = 'info', serverId?: string) {
-    this.db = db;
+    this.db = drizzle(db, { schema: { logs: logsTable } });
     this.minLevel = minLevel;
     this.serverId = serverId || uuidv4();
   }
@@ -108,47 +124,40 @@ export class Logger {
   /**
    * Query logs with filters
    */
-  query(options: LogQueryOptions = {}): LogEntry[] {
-    const conditions: string[] = [];
-    const params: (string | number)[] = [];
+  async query(options: LogQueryOptions = {}): Promise<LogEntry[]> {
+    const conditions: SQL[] = [];
 
     if (options.level) {
-      conditions.push('level = ?');
-      params.push(options.level);
+      conditions.push(eq(logsTable.level, options.level));
     }
 
     if (options.tool) {
-      conditions.push('tool = ?');
-      params.push(options.tool);
+      conditions.push(eq(logsTable.tool, options.tool));
     }
 
     if (options.sessionId) {
-      conditions.push('session_id = ?');
-      params.push(options.sessionId);
+      conditions.push(eq(logsTable.sessionId, options.sessionId));
     }
 
     if (options.startDate) {
-      conditions.push('timestamp >= ?');
-      params.push(options.startDate);
+      conditions.push(gte(logsTable.timestamp, options.startDate));
     }
 
     if (options.endDate) {
-      conditions.push('timestamp <= ?');
-      params.push(options.endDate);
+      conditions.push(lte(logsTable.timestamp, options.endDate));
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
     const limit = options.limit || 100;
     const offset = options.offset || 0;
 
-    const stmt = this.db.prepare(`
-      SELECT * FROM logs
-      ${whereClause}
-      ORDER BY timestamp DESC
-      LIMIT ? OFFSET ?
-    `);
-
-    const rows = stmt.all(...params, limit, offset) as Array<Record<string, unknown>>;
+    const rows = await this.db
+      .select()
+      .from(logsTable)
+      .where(whereClause)
+      .orderBy(desc(logsTable.timestamp))
+      .limit(limit)
+      .offset(offset);
 
     return rows.map((row) => this.rowToLogEntry(row));
   }
@@ -156,63 +165,84 @@ export class Logger {
   /**
    * Get log count with optional filters
    */
-  count(options: Omit<LogQueryOptions, 'limit' | 'offset'> = {}): number {
-    const conditions: string[] = [];
-    const params: (string | number)[] = [];
+  async count(options: Omit<LogQueryOptions, 'limit' | 'offset'> = {}): Promise<number> {
+    const conditions: SQL[] = [];
 
     if (options.level) {
-      conditions.push('level = ?');
-      params.push(options.level);
+      conditions.push(eq(logsTable.level, options.level));
     }
 
     if (options.tool) {
-      conditions.push('tool = ?');
-      params.push(options.tool);
+      conditions.push(eq(logsTable.tool, options.tool));
     }
 
     if (options.sessionId) {
-      conditions.push('session_id = ?');
-      params.push(options.sessionId);
+      conditions.push(eq(logsTable.sessionId, options.sessionId));
     }
 
     if (options.startDate) {
-      conditions.push('timestamp >= ?');
-      params.push(options.startDate);
+      conditions.push(gte(logsTable.timestamp, options.startDate));
     }
 
     if (options.endDate) {
-      conditions.push('timestamp <= ?');
-      params.push(options.endDate);
+      conditions.push(lte(logsTable.timestamp, options.endDate));
     }
 
-    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-    const stmt = this.db.prepare(`SELECT COUNT(*) as count FROM logs ${whereClause}`);
-    const result = stmt.get(...params) as { count: number };
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+    const result = await this.db
+      .select({ count: count() })
+      .from(logsTable)
+      .where(whereClause)
+      .get();
 
-    return result.count;
+    return result?.count ?? 0;
   }
 
   /**
    * Trim old logs to keep only maxEntries
    */
-  trim(maxEntries: number): number {
-    const stmt = this.db.prepare(`
-      DELETE FROM logs
-      WHERE id NOT IN (
-        SELECT id FROM logs
-        ORDER BY timestamp DESC
-        LIMIT ?
-      )
-    `);
-    const result = stmt.run(maxEntries);
-    return result.changes;
+  async trim(maxEntries: number): Promise<number> {
+    // Get IDs to keep
+    const rowsToKeep = await this.db
+      .select({ id: logsTable.id })
+      .from(logsTable)
+      .orderBy(desc(logsTable.timestamp))
+      .limit(maxEntries);
+
+    if (rowsToKeep.length === 0) {
+      const result = await this.db.delete(logsTable).run();
+      return result.changes;
+    }
+
+    const idsToKeep = new Set(rowsToKeep.map((r) => r.id));
+
+    // Get all IDs
+    const allRows = await this.db.select({ id: logsTable.id }).from(logsTable);
+    const idsToDelete = allRows.filter((r) => !idsToKeep.has(r.id)).map((r) => r.id);
+
+    if (idsToDelete.length === 0) {
+      return 0;
+    }
+
+    // Delete in batches
+    let deleted = 0;
+    for (let i = 0; i < idsToDelete.length; i += 100) {
+      const batch = idsToDelete.slice(i, i + 100);
+      const result = await this.db
+        .delete(logsTable)
+        .where(inArray(logsTable.id, batch))
+        .run();
+      deleted += result.changes;
+    }
+
+    return deleted;
   }
 
   /**
    * Clear all logs
    */
-  clear(): void {
-    this.db.exec('DELETE FROM logs');
+  async clear(): Promise<void> {
+    await this.db.delete(logsTable).run();
   }
 
   private log(level: LogLevel, message: string, context?: LogContext): void {
@@ -221,72 +251,40 @@ export class Logger {
       return;
     }
 
-    const entry: LogEntry = {
+    const entry: Log = {
       id: uuidv4(),
       timestamp: Date.now(),
       level,
-      tool: context?.tool,
-      action: context?.action,
-      arguments: context?.arguments,
-      result: context?.result,
-      error: context?.error,
-      duration: context?.duration,
-      sessionId: context?.sessionId,
-      projectId: context?.projectId,
-      serverId: context?.serverId || this.serverId,
-      metadata: context?.metadata,
+      tool: context?.tool ?? null,
+      action: context?.action ?? null,
+      arguments: context?.arguments ? JSON.stringify(context.arguments) : null,
+      result: context?.result !== undefined ? JSON.stringify(context.result) : null,
+      error: context?.error ?? null,
+      duration: context?.duration ?? null,
+      sessionId: context?.sessionId ?? null,
+      projectId: context?.projectId ?? null,
+      serverId: context?.serverId ?? this.serverId,
+      metadata: context?.metadata ? JSON.stringify(context.metadata) : null,
     };
 
-    const stmt = this.db.prepare(`
-      INSERT INTO logs (id, timestamp, level, tool, action, arguments, result, error, duration, session_id, project_id, server_id, metadata)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
-
-    stmt.run(
-      entry.id,
-      entry.timestamp,
-      entry.level,
-      entry.tool || null,
-      entry.action || null,
-      entry.arguments ? JSON.stringify(entry.arguments) : null,
-      entry.result !== undefined ? JSON.stringify(entry.result) : null,
-      entry.error || null,
-      entry.duration || null,
-      entry.sessionId || null,
-      entry.projectId || null,
-      entry.serverId || null,
-      entry.metadata ? JSON.stringify(entry.metadata) : null
-    );
+    this.db.insert(logsTable).values(entry).run();
   }
 
-  private rowToLogEntry(row: Record<string, unknown>): LogEntry {
+  private rowToLogEntry(row: Log): LogEntry {
     return {
-      id: row.id as string,
-      timestamp: row.timestamp as number,
+      id: row.id,
+      timestamp: row.timestamp,
       level: row.level as LogLevel,
-      tool: row.tool as string | undefined,
-      action: row.action as string | undefined,
-      arguments: row.arguments ? JSON.parse(row.arguments as string) : undefined,
-      result: row.result ? JSON.parse(row.result as string) : undefined,
-      error: row.error as string | undefined,
-      duration: row.duration as number | undefined,
-      sessionId: row.session_id as string | undefined,
-      projectId: row.project_id as string | undefined,
-      serverId: row.server_id as string | undefined,
-      metadata: row.metadata ? JSON.parse(row.metadata as string) : undefined,
+      tool: row.tool ?? undefined,
+      action: row.action ?? undefined,
+      arguments: row.arguments ? JSON.parse(row.arguments) : undefined,
+      result: row.result ? JSON.parse(row.result) : undefined,
+      error: row.error ?? undefined,
+      duration: row.duration ?? undefined,
+      sessionId: row.sessionId ?? undefined,
+      projectId: row.projectId ?? undefined,
+      serverId: row.serverId ?? undefined,
+      metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
     };
   }
-}
-
-interface LogContext {
-  tool?: string;
-  action?: string;
-  arguments?: Record<string, unknown>;
-  result?: unknown;
-  error?: string;
-  duration?: number;
-  sessionId?: string;
-  projectId?: string;
-  serverId?: string;
-  metadata?: Record<string, unknown>;
 }

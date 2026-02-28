@@ -1,9 +1,11 @@
+import { drizzle } from 'drizzle-orm/better-sqlite3';
 import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
+import * as schema from './schema.js';
 
 /**
- * Initialize the SQLite database with required tables
+ * Initialize the SQLite database with Drizzle ORM
  */
 export function initializeDatabase(dbPath: string): Database.Database {
   // Ensure directory exists
@@ -17,18 +19,21 @@ export function initializeDatabase(dbPath: string): Database.Database {
   // Enable WAL mode for better concurrency
   db.pragma('journal_mode = WAL');
 
-  // Create tables
+  // Create tables using Drizzle's schema sync
+  // This is a simple approach - for production, use migrations
   db.exec(`
     -- Sessions table
     CREATE TABLE IF NOT EXISTS sessions (
       id TEXT PRIMARY KEY,
       phone TEXT NOT NULL UNIQUE,
-      user_id TEXT NOT NULL,
+      user_id TEXT NOT NULL DEFAULT '',
       username TEXT,
       created_at INTEGER NOT NULL,
       last_active_at INTEGER NOT NULL,
-      is_active INTEGER NOT NULL DEFAULT 1
+      is_active INTEGER NOT NULL DEFAULT 0
     );
+    CREATE INDEX IF NOT EXISTS sessions_phone_idx ON sessions(phone);
+    CREATE INDEX IF NOT EXISTS sessions_active_idx ON sessions(is_active);
 
     -- Cache table
     CREATE TABLE IF NOT EXISTS cache (
@@ -37,7 +42,7 @@ export function initializeDatabase(dbPath: string): Database.Database {
       expires_at INTEGER,
       created_at INTEGER NOT NULL
     );
-    CREATE INDEX IF NOT EXISTS idx_cache_expires ON cache(expires_at);
+    CREATE INDEX IF NOT EXISTS cache_expires_idx ON cache(expires_at);
 
     -- Logs table
     CREATE TABLE IF NOT EXISTS logs (
@@ -55,10 +60,10 @@ export function initializeDatabase(dbPath: string): Database.Database {
       server_id TEXT,
       metadata TEXT
     );
-    CREATE INDEX IF NOT EXISTS idx_logs_timestamp ON logs(timestamp);
-    CREATE INDEX IF NOT EXISTS idx_logs_level ON logs(level);
-    CREATE INDEX IF NOT EXISTS idx_logs_session ON logs(session_id);
-    CREATE INDEX IF NOT EXISTS idx_logs_tool ON logs(tool);
+    CREATE INDEX IF NOT EXISTS logs_timestamp_idx ON logs(timestamp);
+    CREATE INDEX IF NOT EXISTS logs_level_idx ON logs(level);
+    CREATE INDEX IF NOT EXISTS logs_session_idx ON logs(session_id);
+    CREATE INDEX IF NOT EXISTS logs_tool_idx ON logs(tool);
 
     -- Config table
     CREATE TABLE IF NOT EXISTS config (
@@ -75,11 +80,18 @@ export function initializeDatabase(dbPath: string): Database.Database {
       timestamp INTEGER NOT NULL,
       tags TEXT
     );
-    CREATE INDEX IF NOT EXISTS idx_stats_metric ON stats(metric_name);
-    CREATE INDEX IF NOT EXISTS idx_stats_timestamp ON stats(timestamp);
+    CREATE INDEX IF NOT EXISTS stats_metric_idx ON stats(metric_name);
+    CREATE INDEX IF NOT EXISTS stats_timestamp_idx ON stats(timestamp);
   `);
 
   return db;
+}
+
+/**
+ * Get Drizzle database instance with schema
+ */
+export function getDrizzleDb(db: Database.Database) {
+  return drizzle(db, { schema });
 }
 
 /**

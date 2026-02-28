@@ -1,109 +1,142 @@
-import type Database from 'better-sqlite3';
+import { eq, like, lt, count, sum, type SQL, sql } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/better-sqlite3';
+import Database from 'better-sqlite3';
+import { cache as cacheTable, type Cache as CacheType } from '../database/schema.js';
 import type { CacheStats } from '../../types/index.js';
 
 /**
- * Cache manager using SQLite storage
+ * Cache manager using Drizzle ORM with SQLite storage
  */
 export class CacheManager {
-  private db: Database.Database;
+  private db: ReturnType<typeof drizzle>;
   private hitCount = 0;
   private missCount = 0;
 
   constructor(db: Database.Database) {
-    this.db = db;
+    this.db = drizzle(db, { schema: { cache: cacheTable } });
   }
 
   /**
    * Set a value in cache with optional TTL
    */
-  set<T>(key: string, value: T, ttlMs?: number): void {
+  async set<T>(key: string, value: T, ttlMs?: number): Promise<void> {
     const now = Date.now();
     const expiresAt = ttlMs ? now + ttlMs : null;
 
-    const stmt = this.db.prepare(`
-      INSERT OR REPLACE INTO cache (key, value, expires_at, created_at)
-      VALUES (?, ?, ?, ?)
-    `);
-
-    stmt.run(key, JSON.stringify(value), expiresAt, now);
+    await this.db
+      .insert(cacheTable)
+      .values({
+        key,
+        value: JSON.stringify(value),
+        expiresAt,
+        createdAt: now,
+      })
+      .onConflictDoUpdate({
+        target: cacheTable.key,
+        set: {
+          value: JSON.stringify(value),
+          expiresAt,
+          createdAt: now,
+        },
+      });
   }
 
   /**
    * Get a value from cache
    */
-  get<T>(key: string): T | null {
-    const stmt = this.db.prepare('SELECT value, expires_at FROM cache WHERE key = ?');
-    const row = stmt.get(key) as { value: string; expires_at: number | null } | undefined;
+  async get<T>(key: string): Promise<T | null> {
+    const result = await this.db
+      .select()
+      .from(cacheTable)
+      .where(eq(cacheTable.key, key))
+      .get();
 
-    if (!row) {
+    if (!result) {
       this.missCount++;
       return null;
     }
 
     // Check if expired
-    if (row.expires_at && row.expires_at < Date.now()) {
-      this.delete(key);
+    if (result.expiresAt && result.expiresAt < Date.now()) {
+      await this.delete(key);
       this.missCount++;
       return null;
     }
 
     this.hitCount++;
-    return JSON.parse(row.value) as T;
+    return JSON.parse(result.value) as T;
   }
 
   /**
    * Delete a key from cache
    */
-  delete(key: string): boolean {
-    const stmt = this.db.prepare('DELETE FROM cache WHERE key = ?');
-    const result = stmt.run(key);
+  async delete(key: string): Promise<boolean> {
+    const result = await this.db
+      .delete(cacheTable)
+      .where(eq(cacheTable.key, key))
+      .run();
+
     return result.changes > 0;
   }
 
   /**
    * Clear all cache entries
    */
-  clear(): void {
-    this.db.exec('DELETE FROM cache');
+  async clear(): Promise<void> {
+    await this.db.delete(cacheTable).run();
   }
 
   /**
    * Clear cache entries by prefix
    */
-  clearByPrefix(prefix: string): void {
-    const stmt = this.db.prepare('DELETE FROM cache WHERE key LIKE ?');
-    stmt.run(`${prefix}%`);
+  async clearByPrefix(prefix: string): Promise<void> {
+    await this.db
+      .delete(cacheTable)
+      .where(like(cacheTable.key, `${prefix}%`))
+      .run();
   }
 
   /**
    * Get cache statistics
    */
-  stats(): CacheStats {
-    const totalStmt = this.db.prepare('SELECT COUNT(*) as count FROM cache');
-    const expiredStmt = this.db.prepare(
-      'SELECT COUNT(*) as count FROM cache WHERE expires_at IS NOT NULL AND expires_at < ?'
-    );
-    const sizeStmt = this.db.prepare('SELECT SUM(length(value)) as size FROM cache');
+  async stats(): Promise<CacheStats> {
+    const now = Date.now();
 
-    const total = (totalStmt.get() as { count: number }).count;
-    const expired = (expiredStmt.get(Date.now()) as { count: number }).count;
-    const sizeResult = sizeStmt.get() as { size: number | null };
+    const totalResult = await this.db
+      .select({ count: count() })
+      .from(cacheTable)
+      .get();
+
+    const expiredResult = await this.db
+      .select({ count: count() })
+      .from(cacheTable)
+      .where(lt(cacheTable.expiresAt, now))
+      .get();
+
+    const sizeResult = await this.db
+      .select({ size: sum(sql`length(${cacheTable.value})`) as unknown })
+      .from(cacheTable)
+      .get();
 
     return {
-      totalEntries: total,
-      expiredEntries: expired,
+      totalEntries: totalResult?.count ?? 0,
+      expiredEntries: expiredResult?.count ?? 0,
       hitCount: this.hitCount,
       missCount: this.missCount,
-      size: sizeResult.size || 0,
+      size: Number(sizeResult?.size) ?? 0,
     };
   }
 
   /**
    * Clean up expired entries
    */
-  cleanup(): number {
-    const stmt = this.db.prepare('DELETE FROM cache WHERE expires_at IS NOT NULL AND expires_at < ?');
-    const result = stmt.run(Date.now());
+  async cleanup(): Promise<number> {
+    const now = Date.now();
+    const result = await this.db
+      .delete(cacheTable)
+      .where(lt(cacheTable.expiresAt, now))
+      .run();
+
     return result.changes;
   }
 

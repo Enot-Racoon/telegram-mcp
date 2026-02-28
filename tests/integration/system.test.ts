@@ -19,7 +19,6 @@ describe('Integration Tests', () => {
   let cache: CacheManager;
   let logger: Logger;
   let accountManager: AccountManager;
-  let provider: MockTelegramProvider;
   let telegramService: TelegramService;
   let dbPath: string;
 
@@ -29,8 +28,7 @@ describe('Integration Tests', () => {
     cache = new CacheManager(db);
     logger = new Logger(db, 'debug');
     accountManager = new AccountManager(db);
-    provider = new MockTelegramProvider({ delayMs: 0 });
-    telegramService = new TelegramService(provider);
+    telegramService = new TelegramService(new MockTelegramProvider({ delayMs: 0 }));
   });
 
   afterEach(() => {
@@ -41,7 +39,7 @@ describe('Integration Tests', () => {
   });
 
   describe('Account and Session Flow', () => {
-    it('should create account, authenticate, and log activity', () => {
+    it('should create account, authenticate, and log activity', async () => {
       // Create account
       const account = accountManager.createAccount('+1234567890');
       expect(account.status).toBe('pending_auth');
@@ -53,7 +51,7 @@ describe('Integration Tests', () => {
       });
 
       // Authenticate with Telegram
-      telegramService.login('+1234567890');
+      await telegramService.login('+1234567890');
 
       // Activate session
       accountManager.activateSession(account.id, 'telegram-user-123', 'testuser');
@@ -64,22 +62,22 @@ describe('Integration Tests', () => {
       expect(updated?.session?.username).toBe('testuser');
 
       // Verify log was created
-      const logs = logger.query({ sessionId: account.id });
+      const logs = await logger.query({ sessionId: account.id });
       expect(logs.length).toBeGreaterThan(0);
     });
   });
 
   describe('Cache and Logging Integration', () => {
-    it('should cache data and log cache operations', () => {
+    it('should cache data and log cache operations', async () => {
       const cacheKey = 'chats:list';
       const cacheData = [{ id: '1', title: 'Test' }];
 
       // Cache the data
-      cache.set(cacheKey, cacheData, 60000);
+      await cache.set(cacheKey, cacheData, 60000);
       logger.debug('Cache set', { metadata: { key: cacheKey } });
 
       // Retrieve from cache
-      const cached = cache.get<typeof cacheData>(cacheKey);
+      const cached = await cache.get<typeof cacheData>(cacheKey);
       logger.debug('Cache get', {
         metadata: { key: cacheKey, hit: cached !== null },
       });
@@ -87,7 +85,7 @@ describe('Integration Tests', () => {
       expect(cached).toEqual(cacheData);
 
       // Verify logs
-      const cacheLogs = logger.query({ level: 'debug' });
+      const cacheLogs = await logger.query({ level: 'debug' });
       expect(cacheLogs.length).toBeGreaterThanOrEqual(2);
     });
   });
@@ -111,7 +109,7 @@ describe('Integration Tests', () => {
       logger.logTool('telegram', 'listChats', {}, chats, 30, { sessionId: account.id });
 
       // 5. Cache the chats
-      cache.set(`chats:${account.id}`, chats, 300000);
+      await cache.set(`chats:${account.id}`, chats, 300000);
 
       // 6. Send a message
       if (chats.length > 0) {
@@ -125,7 +123,7 @@ describe('Integration Tests', () => {
       expect(accountManager.getAccount(account.id)?.status).toBe('active');
 
       // 8. Verify logs were created
-      const allLogs = logger.query();
+      const allLogs = await logger.query();
       expect(allLogs.length).toBeGreaterThanOrEqual(4);
     });
   });
@@ -144,7 +142,7 @@ describe('Integration Tests', () => {
       }
 
       // Verify error was logged
-      const errorLogs = logger.query({ level: 'error' });
+      const errorLogs = await logger.query({ level: 'error' });
       expect(errorLogs.length).toBeGreaterThan(0);
       expect(errorLogs[0].error).toBeDefined();
     });
@@ -165,12 +163,12 @@ describe('Integration Tests', () => {
       const chats2 = await telegramService.getChats();
 
       // Cache separately
-      cache.set(`chats:${account1.id}`, chats1);
-      cache.set(`chats:${account2.id}`, chats2);
+      await cache.set(`chats:${account1.id}`, chats1);
+      await cache.set(`chats:${account2.id}`, chats2);
 
       // Verify independent caches
-      const cached1 = cache.get(`chats:${account1.id}`);
-      const cached2 = cache.get(`chats:${account2.id}`);
+      const cached1 = await cache.get(`chats:${account1.id}`);
+      const cached2 = await cache.get(`chats:${account2.id}`);
 
       expect(cached1).toEqual(chats1);
       expect(cached2).toEqual(chats2);
@@ -178,11 +176,11 @@ describe('Integration Tests', () => {
   });
 
   describe('Cache Cleanup and Log Trimming', () => {
-    it('should clean up expired cache and trim logs', () => {
+    it('should clean up expired cache and trim logs', async () => {
       // Create some cache entries with short TTL
-      cache.set('temp1', 'value1', 50);
-      cache.set('temp2', 'value2', 50);
-      cache.set('permanent', 'value3');
+      await cache.set('temp1', 'value1', 50);
+      await cache.set('temp2', 'value2', 50);
+      await cache.set('permanent', 'value3');
 
       // Create some logs
       for (let i = 0; i < 20; i++) {
@@ -190,18 +188,15 @@ describe('Integration Tests', () => {
       }
 
       // Wait for cache expiration
-      const start = Date.now();
-      while (Date.now() - start < 100) {
-        // Busy wait
-      }
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Cleanup cache
-      const cleaned = cache.cleanup();
+      const cleaned = await cache.cleanup();
       expect(cleaned).toBe(2);
 
       // Trim logs to 10
-      const trimmed = logger.trim(10);
-      expect(logger.count()).toBeLessThanOrEqual(10);
+      await logger.trim(10);
+      expect(await logger.count()).toBeLessThanOrEqual(10);
     });
   });
 });
