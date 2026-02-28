@@ -1,10 +1,10 @@
-import os from 'node:os';
-import path from 'node:path';
-import type { Config } from '../types/index.js';
+import os from "node:os";
+import path from "node:path";
+import type { Config } from "../../types";
 
 const DEFAULT_CONFIG: Config = {
-  databasePath: path.join(os.homedir(), '.telegram-mcp', 'telegram.db'),
-  logLevel: 'info',
+  databasePath: path.join(os.homedir(), ".telegram-mcp", "telegram.db"),
+  logLevel: "info",
   cacheDefaultTTL: 3600000, // 1 hour in ms
   maxLogEntries: 10000,
 };
@@ -22,8 +22,8 @@ export function getConfig(): Config {
   }
 
   // Override log level if provided via environment
-  const logLevel = process.env.TELEGRAM_MCP_LOG_LEVEL as Config['logLevel'];
-  if (logLevel && ['debug', 'info', 'warn', 'error'].includes(logLevel)) {
+  const logLevel = process.env.TELEGRAM_MCP_LOG_LEVEL as Config["logLevel"];
+  if (logLevel && ["debug", "info", "warn", "error"].includes(logLevel)) {
     config.logLevel = logLevel;
   }
 
@@ -61,7 +61,7 @@ export function ensureDatabaseDirectory(dbPath: string): string {
 
 function dirExists(dir: string): boolean {
   try {
-    const fs = require('node:fs') as typeof import('node:fs');
+    const fs = require("node:fs") as typeof import("node:fs");
     return fs.existsSync(dir);
   } catch {
     return false;

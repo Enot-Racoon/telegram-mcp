@@ -1,9 +1,9 @@
-import { eq, and, gte, lte, desc, count, type SQL, inArray } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import Database from 'better-sqlite3';
-import { v4 as uuidv4 } from 'uuid';
-import { logs as logsTable, type Log } from '../database/schema';
-import type { LogEntry, LogQueryOptions } from '../../types';
+import { eq, and, gte, lte, desc, count, type SQL, inArray } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import Database from "better-sqlite3";
+import { v4 as uuidv4 } from "uuid";
+import { logs as logsTable, type Log } from "../database/schema";
+import type { LogEntry, LogQueryOptions } from "../../types";
 
 /**
  * Logger level priority
@@ -38,7 +38,11 @@ export class Logger {
   private minLevel: LogLevel;
   private serverId: string;
 
-  constructor(db: Database.Database, minLevel: LogLevel = 'info', serverId?: string) {
+  constructor(
+    db: Database.Database,
+    minLevel: LogLevel = "info",
+    serverId?: string,
+  ) {
     this.db = drizzle(db, { schema: { logs: logsTable } });
     this.minLevel = minLevel;
     this.serverId = serverId || uuidv4();
@@ -55,28 +59,28 @@ export class Logger {
    * Log a debug message
    */
   debug(message: string, context?: LogContext): void {
-    this.log('debug', message, context);
+    this.log("debug", message, context);
   }
 
   /**
    * Log an info message
    */
   info(message: string, context?: LogContext): void {
-    this.log('info', message, context);
+    this.log("info", message, context);
   }
 
   /**
    * Log a warning message
    */
   warn(message: string, context?: LogContext): void {
-    this.log('warn', message, context);
+    this.log("warn", message, context);
   }
 
   /**
    * Log an error message
    */
   error(message: string, context?: LogContext): void {
-    this.log('error', message, context);
+    this.log("error", message, context);
   }
 
   /**
@@ -88,9 +92,12 @@ export class Logger {
     args: Record<string, unknown>,
     result: unknown,
     duration: number,
-    context?: Omit<LogContext, 'tool' | 'action' | 'arguments' | 'result' | 'duration'>
+    context?: Omit<
+      LogContext,
+      "tool" | "action" | "arguments" | "result" | "duration"
+    >,
   ): void {
-    this.log('info', `Tool executed: ${tool}.${action}`, {
+    this.log("info", `Tool executed: ${tool}.${action}`, {
       ...context,
       tool,
       action,
@@ -109,9 +116,12 @@ export class Logger {
     args: Record<string, unknown>,
     error: Error,
     duration: number,
-    context?: Omit<LogContext, 'tool' | 'action' | 'arguments' | 'error' | 'duration'>
+    context?: Omit<
+      LogContext,
+      "tool" | "action" | "arguments" | "error" | "duration"
+    >,
   ): void {
-    this.log('error', `Tool error: ${tool}.${action}`, {
+    this.log("error", `Tool error: ${tool}.${action}`, {
       ...context,
       tool,
       action,
@@ -165,7 +175,9 @@ export class Logger {
   /**
    * Get log count with optional filters
    */
-  async count(options: Omit<LogQueryOptions, 'limit' | 'offset'> = {}): Promise<number> {
+  async count(
+    options: Omit<LogQueryOptions, "limit" | "offset"> = {},
+  ): Promise<number> {
     const conditions: SQL[] = [];
 
     if (options.level) {
@@ -218,7 +230,9 @@ export class Logger {
 
     // Get all IDs
     const allRows = await this.db.select({ id: logsTable.id }).from(logsTable);
-    const idsToDelete = allRows.filter((r) => !idsToKeep.has(r.id)).map((r) => r.id);
+    const idsToDelete = allRows
+      .filter((r) => !idsToKeep.has(r.id))
+      .map((r) => r.id);
 
     if (idsToDelete.length === 0) {
       return 0;
@@ -258,7 +272,8 @@ export class Logger {
       tool: context?.tool ?? null,
       action: context?.action ?? null,
       arguments: context?.arguments ? JSON.stringify(context.arguments) : null,
-      result: context?.result !== undefined ? JSON.stringify(context.result) : null,
+      result:
+        context?.result !== undefined ? JSON.stringify(context.result) : null,
       error: context?.error ?? null,
       duration: context?.duration ?? null,
       sessionId: context?.sessionId ?? null,

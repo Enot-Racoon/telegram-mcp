@@ -6,6 +6,7 @@ import { AccountManager } from '../../src/accounts/AccountManager.js';
 import { TelegramService } from '../../src/telegram/TelegramService.js';
 import { MockTelegramProvider } from '../../src/telegram/MockTelegramProvider.js';
 import { initializeDatabase, closeDatabase } from '../../src/core/database/index.js';
+import { applyMigrations } from '../setup.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { tmpdir } from 'node:os';
@@ -25,6 +26,7 @@ describe('Integration Tests', () => {
   beforeEach(() => {
     dbPath = path.join(tmpdir(), `test-integration-${Date.now()}.db`);
     db = initializeDatabase(dbPath);
+    applyMigrations(db);
     cache = new CacheManager(db);
     logger = new Logger(db, 'debug');
     accountManager = new AccountManager(db);

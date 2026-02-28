@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { TelegramMCPServer } from './server.js';
-import { getConfig, ensureDatabaseDirectory } from './core/config/index.js';
+import { TelegramMCPServer } from "./server";
+import { getConfig, ensureDatabaseDirectory } from "./core/config";
 
 /**
  * Print help message
@@ -48,7 +48,7 @@ Examples:
  * Print version
  */
 function printVersion(): void {
-  console.log('0.1.0');
+  console.log("0.1.0");
 }
 
 /**
@@ -58,12 +58,12 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
 
   // Handle CLI arguments
-  if (args.includes('--help') || args.includes('-h')) {
+  if (args.includes("--help") || args.includes("-h")) {
     printHelp();
     process.exit(0);
   }
 
-  if (args.includes('--version') || args.includes('-v')) {
+  if (args.includes("--version") || args.includes("-v")) {
     printVersion();
     process.exit(0);
   }
@@ -80,27 +80,27 @@ async function main(): Promise<void> {
     console.error(`\nReceived ${signal}, shutting down gracefully...`);
     try {
       await server.stop();
-      console.error('Shutdown complete');
+      console.error("Shutdown complete");
       process.exit(0);
     } catch (error) {
-      console.error('Error during shutdown:', error);
+      console.error("Error during shutdown:", error);
       process.exit(1);
     }
   };
 
-  process.on('SIGINT', () => shutdown('SIGINT'));
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
 
   try {
     await server.start();
   } catch (error) {
-    console.error('Failed to start server:', error);
+    console.error("Failed to start server:", error);
     process.exit(1);
   }
 }
 
 // Run main
 main().catch((error) => {
-  console.error('Fatal error:', error);
+  console.error("Fatal error:", error);
   process.exit(1);
 });

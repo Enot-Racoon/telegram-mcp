@@ -1,9 +1,12 @@
-import { eq, desc, count } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import Database from 'better-sqlite3';
-import { v4 as uuidv4 } from 'uuid';
-import { sessions as sessionsTable, type Session as SessionRow } from '../core/database/schema.js';
-import type { Account, AccountStatus, Session } from '../../types/index.js';
+import { eq, desc, count } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import Database from "better-sqlite3";
+import { v4 as uuidv4 } from "uuid";
+import {
+  sessions as sessionsTable,
+  type Session as SessionRow,
+} from "../core/database/schema";
+import type { Account, AccountStatus, Session } from "../types";
 
 /**
  * Account manager for handling Telegram account sessions using Drizzle ORM
@@ -23,20 +26,23 @@ export class AccountManager {
     const account: Account = {
       id: uuidv4(),
       phone,
-      status: 'pending_auth',
+      status: "pending_auth",
       createdAt: now,
       updatedAt: now,
     };
 
-    this.db.insert(sessionsTable).values({
-      id: account.id,
-      phone,
-      userId: '',
-      username: null,
-      createdAt: now,
-      lastActiveAt: now,
-      isActive: 0,
-    }).run();
+    this.db
+      .insert(sessionsTable)
+      .values({
+        id: account.id,
+        phone,
+        userId: "",
+        username: null,
+        createdAt: now,
+        lastActiveAt: now,
+        isActive: 0,
+      })
+      .run();
 
     return account;
   }
@@ -105,8 +111,12 @@ export class AccountManager {
   /**
    * Update account status
    */
-  updateAccountStatus(id: string, status: AccountStatus, _error?: string): void {
-    const isActive = status === 'active' ? 1 : 0;
+  updateAccountStatus(
+    id: string,
+    status: AccountStatus,
+    _error?: string,
+  ): void {
+    const isActive = status === "active" ? 1 : 0;
 
     this.db
       .update(sessionsTable)
@@ -208,16 +218,13 @@ export class AccountManager {
    * Count accounts
    */
   count(): number {
-    const result = this.db
-      .select({ count: count() })
-      .from(sessionsTable)
-      .get();
+    const result = this.db.select({ count: count() }).from(sessionsTable).get();
 
     return result?.count ?? 0;
   }
 
   private rowToAccount(row: SessionRow): Account {
-    const status: AccountStatus = row.isActive ? 'active' : 'inactive';
+    const status: AccountStatus = row.isActive ? "active" : "inactive";
 
     return {
       id: row.id,

@@ -16,12 +16,7 @@
     "rootDir": "./src",
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@core/*": ["src/core/*"],
-      "@telegram/*": ["src/telegram/*"],
-      "@accounts/*": ["src/accounts/*"],
-      "@tools/*": ["src/tools/*"],
-      "@types/*": ["src/types/*"]
+      "~/*": ["src/*"]
     },
     "types": ["node", "vitest/globals"]
   },

@@ -1,5 +1,5 @@
 {
-  "name": "telegram-mcp",
+  "name": "@toolcode/telegram-mcp",
   "version": "0.1.0",
   "description": "MCP server for Telegram integration",
   "type": "module",
@@ -9,7 +9,7 @@
   },
   "scripts": {
     "build": "tsup src/index.ts --format esm --dts --outDir dist",
-    "dev": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",

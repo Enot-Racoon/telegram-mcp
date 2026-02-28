@@ -1,5 +1,5 @@
-import type { Chat, Message, User } from '../../types';
-import type { TelegramProvider, UserInfo } from './TelegramProvider';
+import type { Chat, Message, User } from "../types";
+import type { TelegramProvider, UserInfo } from "./TelegramProvider";
 
 /**
  * Mock Telegram provider for offline testing
@@ -43,32 +43,32 @@ export class MockTelegramProvider implements TelegramProvider {
 
   private throwIfError(): void {
     if (this.simulateError) {
-      throw new Error('Simulated Telegram API error');
+      throw new Error("Simulated Telegram API error");
     }
   }
 
   private initializeMockData(): void {
     // Create mock users
     const users: Record<string, User> = {
-      'user-1': {
-        id: 'user-1',
-        username: 'john_doe',
-        firstName: 'John',
-        lastName: 'Doe',
+      "user-1": {
+        id: "user-1",
+        username: "john_doe",
+        firstName: "John",
+        lastName: "Doe",
         isBot: false,
       },
-      'user-2': {
-        id: 'user-2',
-        username: 'jane_smith',
-        firstName: 'Jane',
-        lastName: 'Smith',
+      "user-2": {
+        id: "user-2",
+        username: "jane_smith",
+        firstName: "Jane",
+        lastName: "Smith",
         isBot: false,
       },
-      'bot-1': {
-        id: 'bot-1',
-        username: 'helper_bot',
-        firstName: 'Helper',
-        lastName: 'Bot',
+      "bot-1": {
+        id: "bot-1",
+        username: "helper_bot",
+        firstName: "Helper",
+        lastName: "Bot",
         isBot: true,
       },
     };
@@ -76,46 +76,46 @@ export class MockTelegramProvider implements TelegramProvider {
     // Create mock chats
     const mockChats: Chat[] = [
       {
-        id: 'chat-1',
-        title: 'John Doe',
-        type: 'private',
-        username: 'john_doe',
+        id: "chat-1",
+        title: "John Doe",
+        type: "private",
+        username: "john_doe",
         unreadCount: 2,
         lastMessage: {
-          id: 'msg-1',
-          chatId: 'chat-1',
-          from: users['user-1'],
-          text: 'Hey, how are you?',
+          id: "msg-1",
+          chatId: "chat-1",
+          from: users["user-1"],
+          text: "Hey, how are you?",
           timestamp: Date.now() - 3600000,
           isRead: false,
         },
       },
       {
-        id: 'chat-2',
-        title: 'Project Team',
-        type: 'group',
-        username: 'project_team',
+        id: "chat-2",
+        title: "Project Team",
+        type: "group",
+        username: "project_team",
         unreadCount: 5,
         lastMessage: {
-          id: 'msg-2',
-          chatId: 'chat-2',
-          from: users['user-2'],
-          text: 'Meeting at 3pm today',
+          id: "msg-2",
+          chatId: "chat-2",
+          from: users["user-2"],
+          text: "Meeting at 3pm today",
           timestamp: Date.now() - 7200000,
           isRead: false,
         },
       },
       {
-        id: 'chat-3',
-        title: 'Tech News',
-        type: 'channel',
-        username: 'tech_news',
+        id: "chat-3",
+        title: "Tech News",
+        type: "channel",
+        username: "tech_news",
         unreadCount: 0,
         lastMessage: {
-          id: 'msg-3',
-          chatId: 'chat-3',
-          from: users['bot-1'],
-          text: 'New TypeScript release available!',
+          id: "msg-3",
+          chatId: "chat-3",
+          from: users["bot-1"],
+          text: "New TypeScript release available!",
           timestamp: Date.now() - 86400000,
           isRead: true,
         },
@@ -125,50 +125,50 @@ export class MockTelegramProvider implements TelegramProvider {
     mockChats.forEach((chat) => this.chats.set(chat.id, chat));
 
     // Create mock messages for each chat
-    this.messages.set('chat-1', [
+    this.messages.set("chat-1", [
       {
-        id: 'msg-1',
-        chatId: 'chat-1',
-        from: users['user-1'],
-        text: 'Hey, how are you?',
+        id: "msg-1",
+        chatId: "chat-1",
+        from: users["user-1"],
+        text: "Hey, how are you?",
         timestamp: Date.now() - 3600000,
         isRead: false,
       },
       {
-        id: 'msg-4',
-        chatId: 'chat-1',
-        from: users['user-1'],
-        text: 'Did you see the new update?',
+        id: "msg-4",
+        chatId: "chat-1",
+        from: users["user-1"],
+        text: "Did you see the new update?",
         timestamp: Date.now() - 7200000,
         isRead: true,
       },
     ]);
 
-    this.messages.set('chat-2', [
+    this.messages.set("chat-2", [
       {
-        id: 'msg-2',
-        chatId: 'chat-2',
-        from: users['user-2'],
-        text: 'Meeting at 3pm today',
+        id: "msg-2",
+        chatId: "chat-2",
+        from: users["user-2"],
+        text: "Meeting at 3pm today",
         timestamp: Date.now() - 7200000,
         isRead: false,
       },
       {
-        id: 'msg-5',
-        chatId: 'chat-2',
-        from: users['user-1'],
-        text: 'Got it, thanks!',
+        id: "msg-5",
+        chatId: "chat-2",
+        from: users["user-1"],
+        text: "Got it, thanks!",
         timestamp: Date.now() - 10800000,
         isRead: true,
       },
     ]);
 
-    this.messages.set('chat-3', [
+    this.messages.set("chat-3", [
       {
-        id: 'msg-3',
-        chatId: 'chat-3',
-        from: users['bot-1'],
-        text: 'New TypeScript release available!',
+        id: "msg-3",
+        chatId: "chat-3",
+        from: users["bot-1"],
+        text: "New TypeScript release available!",
         timestamp: Date.now() - 86400000,
         isRead: true,
       },
@@ -182,11 +182,11 @@ export class MockTelegramProvider implements TelegramProvider {
     // Simulate successful login
     this.isAuthenticatedFlag = true;
     this.currentUser = {
-      id: 'current-user',
+      id: "current-user",
       phone,
-      username: 'mock_user',
-      firstName: 'Mock',
-      lastName: 'User',
+      username: "mock_user",
+      firstName: "Mock",
+      lastName: "User",
       isBot: false,
     };
   }
@@ -215,7 +215,7 @@ export class MockTelegramProvider implements TelegramProvider {
     this.throwIfError();
 
     if (!this.isAuthenticatedFlag) {
-      throw new Error('Not authenticated');
+      throw new Error("Not authenticated");
     }
 
     return Array.from(this.chats.values());
@@ -226,7 +226,7 @@ export class MockTelegramProvider implements TelegramProvider {
     this.throwIfError();
 
     if (!this.isAuthenticatedFlag) {
-      throw new Error('Not authenticated');
+      throw new Error("Not authenticated");
     }
 
     const chatMessages = this.messages.get(chatId) || [];
@@ -238,7 +238,7 @@ export class MockTelegramProvider implements TelegramProvider {
     this.throwIfError();
 
     if (!this.isAuthenticatedFlag) {
-      throw new Error('Not authenticated');
+      throw new Error("Not authenticated");
     }
 
     const chat = this.chats.get(chatId);
@@ -251,7 +251,7 @@ export class MockTelegramProvider implements TelegramProvider {
       id: `msg-${Date.now()}`,
       chatId,
       from: {
-        id: 'current-user',
+        id: "current-user",
         username: this.currentUser?.username,
         firstName: this.currentUser?.firstName,
         lastName: this.currentUser?.lastName,

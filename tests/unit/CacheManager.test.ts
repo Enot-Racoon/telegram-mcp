@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { CacheManager } from '../../src/core/cache/index.js';
 import { initializeDatabase, closeDatabase } from '../../src/core/database/index.js';
+import { applyMigrations } from '../setup.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { tmpdir } from 'node:os';
@@ -15,6 +16,7 @@ describe('CacheManager', () => {
     // Create temp database
     dbPath = path.join(tmpdir(), `test-cache-${Date.now()}.db`);
     db = initializeDatabase(dbPath);
+    applyMigrations(db);
     cache = new CacheManager(db);
   });
 

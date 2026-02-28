@@ -1,20 +1,20 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { Server } from "@modelcontextprotocol/sdk/server";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
-import type { Config } from './types/index.js';
-import { Logger } from './core/logging/index.js';
-import { CacheManager } from './core/cache/index.js';
-import { AccountManager } from './accounts/AccountManager.js';
-import { MockTelegramProvider } from './telegram/MockTelegramProvider.js';
-import { TelegramService } from './telegram/TelegramService.js';
-import { getDatabase, closeDatabase } from './core/database/index.js';
+} from "@modelcontextprotocol/sdk/types.js";
+import type { Config } from "./types";
+import { Logger } from "./core/logging";
+import { CacheManager } from "./core/cache";
+import { AccountManager } from "./accounts/AccountManager";
+import { MockTelegramProvider } from "./telegram/MockTelegramProvider";
+import { TelegramService } from "./telegram/TelegramService";
+import { getDatabase, closeDatabase } from "./core/database";
 
 /**
  * Telegram MCP Server
- * 
+ *
  * This server provides MCP (Model Context Protocol) integration for Telegram.
  * Stage 1: Foundation with mock provider (no real Telegram integration).
  */
@@ -45,14 +45,14 @@ export class TelegramMCPServer {
     // Initialize MCP server
     this.server = new Server(
       {
-        name: 'telegram-mcp',
-        version: '0.1.0',
+        name: "telegram-mcp",
+        version: "0.1.0",
       },
       {
         capabilities: {
           tools: {},
         },
-      }
+      },
     );
 
     this.setupHandlers();
@@ -61,7 +61,7 @@ export class TelegramMCPServer {
   private setupHandlers(): void {
     // List tools handler
     this.server.setRequestHandler(ListToolsRequestSchema, async () => {
-      this.logger.debug('Listing available tools');
+      this.logger.debug("Listing available tools");
 
       // Stage 1: No tools implemented yet
       return {
@@ -73,7 +73,7 @@ export class TelegramMCPServer {
     this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
 
-      this.logger.info('Tool call requested', {
+      this.logger.info("Tool call requested", {
         tool: name,
         arguments: args,
       });
@@ -82,7 +82,7 @@ export class TelegramMCPServer {
       return {
         content: [
           {
-            type: 'text',
+            type: "text",
             text: `Tool '${name}' is not yet implemented. This is a placeholder for Stage 1 foundation.`,
           },
         ],
@@ -92,12 +92,15 @@ export class TelegramMCPServer {
 
     // Error handler
     this.server.onerror = (error) => {
-      this.logger.error('Server error', { error: error.message });
+      this.logger.error("Server error", { error: error.message });
     };
 
     // Close handler
     this.server.onclose = () => {
-      this.logger.info('Server closed');
+      this.logger.info("Server closed", {
+        tool: "self",
+        action: "close",
+      });
       this.isRunning = false;
     };
   }
@@ -107,11 +110,13 @@ export class TelegramMCPServer {
    */
   async start(): Promise<void> {
     if (this.isRunning) {
-      throw new Error('Server is already running');
+      throw new Error("Server is already running");
     }
 
-    this.logger.info('Starting Telegram MCP Server', {
-      config: {
+    this.logger.info("Starting Telegram MCP Server", {
+      tool: "self",
+      action: "start",
+      arguments: {
         databasePath: this.config.databasePath,
         logLevel: this.config.logLevel,
       },
@@ -122,7 +127,10 @@ export class TelegramMCPServer {
 
     this.isRunning = true;
 
-    this.logger.info('Telegram MCP Server started successfully');
+    this.logger.info("Telegram MCP Server started successfully", {
+      tool: "self",
+      action: "start",
+    });
   }
 
   /**
@@ -133,7 +141,10 @@ export class TelegramMCPServer {
       return;
     }
 
-    this.logger.info('Stopping Telegram MCP Server');
+    this.logger.info("Stopping Telegram MCP Server", {
+      tool: "self",
+      action: "stop",
+    });
 
     await this.server.close();
     closeDatabase(getDatabase(this.config.databasePath));

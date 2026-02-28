@@ -1,5 +1,5 @@
-import type { Chat, Message } from '../../types';
-import type { TelegramProvider } from './TelegramProvider';
+import type { Chat, Message } from "../types";
+import type { TelegramProvider } from "./TelegramProvider";
 
 /**
  * Telegram service that wraps the provider with additional functionality
@@ -36,7 +36,7 @@ export class TelegramService {
    * Get all chats with optional filtering
    */
   async getChats(options?: {
-    type?: 'private' | 'group' | 'channel';
+    type?: "private" | "group" | "channel";
     unreadOnly?: boolean;
   }): Promise<Chat[]> {
     const chats = await this.provider.listChats();
@@ -81,7 +81,11 @@ export class TelegramService {
   /**
    * Search messages in a chat
    */
-  async searchMessages(chatId: string, query: string, limit: number = 20): Promise<Message[]> {
+  async searchMessages(
+    chatId: string,
+    query: string,
+    limit: number = 20,
+  ): Promise<Message[]> {
     const messages = await this.provider.getMessages(chatId, 100);
     const lowerQuery = query.toLowerCase();
 

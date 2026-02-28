@@ -1,8 +1,8 @@
-import { eq, like, lt, count, sum, type SQL, sql } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/better-sqlite3';
-import Database from 'better-sqlite3';
-import { cache as cacheTable, type Cache as CacheType } from '../database/schema.js';
-import type { CacheStats } from '../../types/index.js';
+import { eq, like, lt, count, sum, type SQL, sql } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/better-sqlite3";
+import Database from "better-sqlite3";
+import { cache as cacheTable } from "../database/schema";
+import type { CacheStats } from "../../types";
 
 /**
  * Cache manager using Drizzle ORM with SQLite storage
@@ -114,7 +114,7 @@ export class CacheManager {
       .get();
 
     const sizeResult = await this.db
-      .select({ size: sum(sql`length(${cacheTable.value})`) as unknown })
+      .select({ size: sum(sql`length(${cacheTable.value})`) as never })
       .from(cacheTable)
       .get();
 

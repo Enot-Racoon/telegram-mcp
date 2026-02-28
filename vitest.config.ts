@@ -5,6 +5,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    pool: 'forks', // Use Node.js worker threads instead of Bun
+    setupFiles: ['./tests/setup.ts'],
     include: ['tests/**/*.test.ts'],
     coverage: {
       provider: 'v8',
@@ -15,12 +17,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@core': path.resolve(__dirname, './src/core'),
-      '@telegram': path.resolve(__dirname, './src/telegram'),
-      '@accounts': path.resolve(__dirname, './src/accounts'),
-      '@tools': path.resolve(__dirname, './src/tools'),
-      '@types': path.resolve(__dirname, './src/types'),
+      '~': path.resolve(__dirname, './src'),
     },
   },
 });

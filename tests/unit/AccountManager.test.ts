@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Database from 'better-sqlite3';
 import { AccountManager } from '../../src/accounts/AccountManager.js';
 import { initializeDatabase, closeDatabase } from '../../src/core/database/index.js';
+import { applyMigrations } from '../setup.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { tmpdir } from 'node:os';
@@ -14,6 +15,7 @@ describe('AccountManager', () => {
   beforeEach(() => {
     dbPath = path.join(tmpdir(), `test-accounts-${Date.now()}.db`);
     db = initializeDatabase(dbPath);
+    applyMigrations(db);
     accountManager = new AccountManager(db);
   });
 
