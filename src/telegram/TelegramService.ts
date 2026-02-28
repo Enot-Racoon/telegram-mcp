@@ -1,5 +1,5 @@
-import type { Chat, Message } from '../../types/index.js';
-import type { TelegramProvider } from './TelegramProvider.js';
+import type { Chat, Message } from '../../types';
+import type { TelegramProvider } from './TelegramProvider';
 
 /**
  * Telegram service that wraps the provider with additional functionality

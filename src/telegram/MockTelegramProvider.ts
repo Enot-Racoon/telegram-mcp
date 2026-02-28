@@ -1,5 +1,5 @@
-import type { Chat, Message, User } from '../../types/index.js';
-import type { TelegramProvider, UserInfo } from './TelegramProvider.js';
+import type { Chat, Message, User } from '../../types';
+import type { TelegramProvider, UserInfo } from './TelegramProvider';
 
 /**
  * Mock Telegram provider for offline testing

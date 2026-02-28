@@ -1,4 +1,4 @@
-import type { Chat, Message } from '../../types/index.js';
+import type { Chat, Message } from '../../types';
 
 /**
  * Telegram provider interface
