@@ -99,7 +99,8 @@ export class TelegramMCPServer {
                 },
                 limit: {
                   type: "number",
-                  description: "Maximum number of messages to return (default: 50)",
+                  description:
+                    "Maximum number of messages to return (default: 50)",
                 },
               },
               required: ["chatId"],
@@ -137,6 +138,29 @@ export class TelegramMCPServer {
               required: ["chatId"],
             },
           },
+          {
+            name: "login",
+            description: "Login to Telegram with a phone number.",
+            inputSchema: {
+              type: "object",
+              properties: {
+                phone: {
+                  type: "string",
+                  description:
+                    "Phone number in international format (e.g., +1234567890)",
+                },
+              },
+              required: ["phone"],
+            },
+          },
+          {
+            name: "isAuthenticated",
+            description: "Check if the server is authenticated with Telegram.",
+            inputSchema: {
+              type: "object",
+              properties: {},
+            },
+          },
         ],
       };
     });
@@ -156,7 +180,11 @@ export class TelegramMCPServer {
 
         switch (name) {
           case "listChats": {
-            const chatType = args?.type as "private" | "group" | "channel" | undefined;
+            const chatType = args?.type as
+              | "private"
+              | "group"
+              | "channel"
+              | undefined;
             const unreadOnly = args?.unreadOnly as boolean | undefined;
 
             result = await this.telegramService.getChats({
@@ -268,6 +296,56 @@ export class TelegramMCPServer {
             };
           }
 
+          case "login": {
+            const phone = args?.phone as string;
+
+            if (!phone) {
+              throw new Error("phone is required");
+            }
+
+            await this.telegramService.login(phone);
+            result = { success: true, phone };
+
+            this.logger.logTool(
+              "telegram",
+              "login",
+              { phone },
+              result,
+              Date.now() - startTime,
+            );
+
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(result, null, 2),
+                },
+              ],
+            };
+          }
+
+          case "isAuthenticated": {
+            const authStatus = this.telegramService.isAuthenticated();
+            result = { authenticated: authStatus };
+
+            this.logger.logTool(
+              "telegram",
+              "isAuthenticated",
+              {},
+              result,
+              Date.now() - startTime,
+            );
+
+            return {
+              content: [
+                {
+                  type: "text",
+                  text: JSON.stringify(result, null, 2),
+                },
+              ],
+            };
+          }
+
           default:
             return {
               content: [
@@ -280,7 +358,8 @@ export class TelegramMCPServer {
             };
         }
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
 
         this.logger.logToolError(
           "telegram",

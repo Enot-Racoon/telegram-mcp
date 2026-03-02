@@ -36,7 +36,9 @@ export function getDrizzleDb(db: Database.Database) {
  * Close the database connection
  */
 export function closeDatabase(db: Database.Database): void {
-  db.close();
+  if (db && typeof db.close === "function") {
+    db.close();
+  }
 }
 
 /**
