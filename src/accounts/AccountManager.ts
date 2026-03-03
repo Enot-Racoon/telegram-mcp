@@ -258,12 +258,12 @@ export class AccountManager {
     // Deactivate all accounts first
     this.db.update(sessionsTable).set({ isActive: 0 }).run();
 
-    // Activate the selected account
-    this.activateSession(
-      id,
-      account.session?.userId || "",
-      account.session?.username,
-    );
+    // Activate the selected account (preserve existing userId/username)
+    this.db
+      .update(sessionsTable)
+      .set({ isActive: 1 })
+      .where(eq(sessionsTable.id, id))
+      .run();
 
     return true;
   }

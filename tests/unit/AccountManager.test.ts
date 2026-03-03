@@ -229,6 +229,7 @@ describe("AccountManager", () => {
       const account2 = accountManager.createAccount("+2222222222");
 
       accountManager.activateSession(account1.id, "user-1");
+      accountManager.activateSession(account2.id, "user-2");
       accountManager.setDefaultAccount(account2.id);
 
       const retrieved1 = accountManager.getAccount(account1.id);
