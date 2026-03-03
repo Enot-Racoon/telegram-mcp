@@ -1,4 +1,4 @@
-import type { Chat, Message, User } from "~/types";
+import type { Chat, Message, User, ChatInfo } from "~/types";
 
 import type { TelegramProvider, UserInfo } from "./TelegramProvider";
 
@@ -15,6 +15,13 @@ export class MockTelegramProvider implements TelegramProvider {
   // In-memory storage
   private chats: Map<string, Chat> = new Map();
   private messages: Map<string, Message[]> = new Map();
+  private pinnedMessages: Map<string, Message> = new Map();
+
+  // Mock participants count for groups/channels
+  private participantsCount: Map<string, number> = new Map([
+    ["chat-2", 15], // Project Team group
+    ["chat-3", 1250], // Tech News channel
+  ]);
 
   constructor(options?: { simulateError?: boolean; delayMs?: number }) {
     this.simulateError = options?.simulateError ?? false;
@@ -162,6 +169,14 @@ export class MockTelegramProvider implements TelegramProvider {
         timestamp: Date.now() - 10800000,
         isRead: true,
       },
+      {
+        id: "msg-6",
+        chatId: "chat-2",
+        from: users["user-2"],
+        text: "Please read the project guidelines",
+        timestamp: Date.now() - 14400000,
+        isRead: true,
+      },
     ]);
 
     this.messages.set("chat-3", [
@@ -174,6 +189,16 @@ export class MockTelegramProvider implements TelegramProvider {
         isRead: true,
       },
     ]);
+
+    // Create pinned messages for mock chats
+    this.pinnedMessages.set("chat-2", {
+      id: "msg-6",
+      chatId: "chat-2",
+      from: users["user-2"],
+      text: "Please read the project guidelines",
+      timestamp: Date.now() - 14400000,
+      isRead: true,
+    });
   }
 
   async login(phone: string): Promise<void> {
@@ -270,6 +295,33 @@ export class MockTelegramProvider implements TelegramProvider {
 
     // Update last message
     chat.lastMessage = newMessage;
+  }
+
+  async getChatInfo(chatId: string): Promise<ChatInfo | null> {
+    await this.simulateDelay();
+    this.throwIfError();
+
+    if (!this.isAuthenticatedFlag) {
+      throw new Error("Not authenticated");
+    }
+
+    const chat = this.chats.get(chatId);
+    if (!chat) {
+      return null;
+    }
+
+    const chatMessages = this.messages.get(chatId) || [];
+    const lastMessage = chatMessages.length > 0 ? chatMessages[0] : undefined;
+    const pinnedMessage = this.pinnedMessages.get(chatId);
+
+    return {
+      type: chat.type,
+      id: chat.id,
+      username: chat.username,
+      participantsCount: this.participantsCount.get(chatId),
+      lastMessage,
+      pinnedMessage,
+    };
   }
 
   /**

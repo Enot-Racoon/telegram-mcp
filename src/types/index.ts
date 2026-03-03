@@ -12,6 +12,18 @@ export interface Chat {
 }
 
 /**
+ * Detailed chat information for get_chat_info tool
+ */
+export interface ChatInfo {
+  type: 'private' | 'group' | 'channel';
+  id: string;
+  username?: string;
+  participantsCount?: number;
+  lastMessage?: Message;
+  pinnedMessage?: Message;
+}
+
+/**
  * Telegram Message representation
  */
 export interface Message {

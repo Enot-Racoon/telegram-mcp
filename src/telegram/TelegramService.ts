@@ -1,4 +1,4 @@
-import type { Chat, Message } from "~/types";
+import type { Chat, Message, ChatInfo } from "~/types";
 
 import type { TelegramProvider } from "./TelegramProvider";
 
@@ -104,5 +104,12 @@ export class TelegramService {
   async getUnreadCount(): Promise<number> {
     const chats = await this.provider.listChats();
     return chats.reduce((sum, chat) => sum + chat.unreadCount, 0);
+  }
+
+  /**
+   * Get detailed information about a chat
+   */
+  async getChatInfo(chatId: string): Promise<ChatInfo | null> {
+    return this.provider.getChatInfo(chatId);
   }
 }

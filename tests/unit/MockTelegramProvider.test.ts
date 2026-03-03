@@ -142,4 +142,61 @@ describe("MockTelegramProvider", () => {
       expect(elapsed).toBeGreaterThanOrEqual(90); // Allow some tolerance
     });
   });
+
+  describe("getChatInfo", () => {
+    it("should throw error when not authenticated", async () => {
+      await expect(provider.getChatInfo("chat-1")).rejects.toThrow(
+        "Not authenticated",
+      );
+    });
+
+    it("should return chat info for existing chat", async () => {
+      await provider.login("+1234567890");
+      const chatInfo = await provider.getChatInfo("chat-1");
+      expect(chatInfo).toBeTruthy();
+      expect(chatInfo?.id).toBe("chat-1");
+      expect(chatInfo?.type).toBe("private");
+      expect(chatInfo?.username).toBe("john_doe");
+    });
+
+    it("should return null for non-existent chat", async () => {
+      await provider.login("+1234567890");
+      const chatInfo = await provider.getChatInfo("non-existent");
+      expect(chatInfo).toBeNull();
+    });
+
+    it("should return participants count for group", async () => {
+      await provider.login("+1234567890");
+      const chatInfo = await provider.getChatInfo("chat-2");
+      expect(chatInfo?.participantsCount).toBe(15);
+    });
+
+    it("should return participants count for channel", async () => {
+      await provider.login("+1234567890");
+      const chatInfo = await provider.getChatInfo("chat-3");
+      expect(chatInfo?.participantsCount).toBe(1250);
+    });
+
+    it("should return last message", async () => {
+      await provider.login("+1234567890");
+      const chatInfo = await provider.getChatInfo("chat-1");
+      expect(chatInfo?.lastMessage).toBeDefined();
+      expect(chatInfo?.lastMessage?.text).toBeDefined();
+    });
+
+    it("should return pinned message for chat with pinned message", async () => {
+      await provider.login("+1234567890");
+      const chatInfo = await provider.getChatInfo("chat-2");
+      expect(chatInfo?.pinnedMessage).toBeDefined();
+      expect(chatInfo?.pinnedMessage?.text).toBe(
+        "Please read the project guidelines",
+      );
+    });
+
+    it("should return undefined pinned message for chat without pinned message", async () => {
+      await provider.login("+1234567890");
+      const chatInfo = await provider.getChatInfo("chat-1");
+      expect(chatInfo?.pinnedMessage).toBeUndefined();
+    });
+  });
 });

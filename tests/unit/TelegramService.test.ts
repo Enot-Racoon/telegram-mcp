@@ -111,4 +111,32 @@ describe("TelegramService", () => {
       expect(count).toBeGreaterThan(0);
     });
   });
+
+  describe("getChatInfo", () => {
+    it("should return chat info", async () => {
+      await service.login("+1234567890");
+      const chatInfo = await service.getChatInfo("chat-1");
+      expect(chatInfo).toBeTruthy();
+      expect(chatInfo?.id).toBe("chat-1");
+      expect(chatInfo?.type).toBe("private");
+    });
+
+    it("should return null for non-existent chat", async () => {
+      await service.login("+1234567890");
+      const chatInfo = await service.getChatInfo("non-existent");
+      expect(chatInfo).toBeNull();
+    });
+
+    it("should include participants count for groups", async () => {
+      await service.login("+1234567890");
+      const chatInfo = await service.getChatInfo("chat-2");
+      expect(chatInfo?.participantsCount).toBe(15);
+    });
+
+    it("should include pinned message when available", async () => {
+      await service.login("+1234567890");
+      const chatInfo = await service.getChatInfo("chat-2");
+      expect(chatInfo?.pinnedMessage).toBeDefined();
+    });
+  });
 });

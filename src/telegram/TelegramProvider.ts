@@ -1,4 +1,4 @@
-import type { Chat, Message } from "~/types";
+import type { Chat, Message, ChatInfo } from "~/types";
 
 /**
  * Telegram provider interface
@@ -39,6 +39,11 @@ export interface TelegramProvider {
    * Get the current user info
    */
   getCurrentUser(): Promise<UserInfo | null>;
+
+  /**
+   * Get detailed information about a chat
+   */
+  getChatInfo(chatId: string): Promise<ChatInfo | null>;
 }
 
 export interface UserInfo {
