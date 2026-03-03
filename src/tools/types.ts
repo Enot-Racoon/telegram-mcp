@@ -6,6 +6,7 @@ import type {
 
 import type { Logger } from "~/core/logging";
 import type { TelegramService } from "~/telegram/TelegramService";
+import type { AccountManager } from "~/accounts/AccountManager";
 
 /**
  * Tool definition structure
@@ -27,6 +28,7 @@ export interface ToolHandlerContext {
   server: Server;
   logger: Logger;
   telegramService: TelegramService;
+  accountManager: AccountManager;
 }
 
 export type ToolHandler = (

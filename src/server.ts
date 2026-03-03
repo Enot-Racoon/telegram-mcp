@@ -102,6 +102,7 @@ export class TelegramMCPServer {
           server: this.server,
           logger: this.logger,
           telegramService: this.telegramService,
+          accountManager: this.accountManager,
         });
 
         this.logger.logTool(

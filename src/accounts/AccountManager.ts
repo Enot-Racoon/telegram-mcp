@@ -7,7 +7,7 @@ import {
   sessions as sessionsTable,
   type Session as SessionRow,
 } from "~/core/database";
-import type { Account, AccountStatus, Session } from "~/types";
+import type { Account, AccountStatus, Session, AuthStatus } from "~/types";
 
 /**
  * Account manager for handling Telegram account sessions using Drizzle ORM
@@ -222,6 +222,62 @@ export class AccountManager {
     const result = this.db.select({ count: count() }).from(sessionsTable).get();
 
     return result?.count ?? 0;
+  }
+
+  /**
+   * Get auth status
+   */
+  getAuthStatus(): AuthStatus {
+    const allAccounts = this.getAllAccounts();
+    const activeAccount = this.getActiveSession();
+
+    return {
+      state: activeAccount ? "authenticated" : "none",
+      hasAccounts: allAccounts.length > 0,
+      accountsCount: allAccounts.length,
+      activeAccount: activeAccount
+        ? {
+            id: activeAccount.id,
+            phone: activeAccount.phone,
+            username: activeAccount.username,
+          }
+        : undefined,
+      requiresLogin: !activeAccount,
+    };
+  }
+
+  /**
+   * Set default (active) account by ID
+   */
+  setDefaultAccount(id: string): boolean {
+    const account = this.getAccount(id);
+    if (!account) {
+      return false;
+    }
+
+    // Deactivate all accounts first
+    this.db.update(sessionsTable).set({ isActive: 0 }).run();
+
+    // Activate the selected account
+    this.activateSession(
+      id,
+      account.session?.userId || "",
+      account.session?.username,
+    );
+
+    return true;
+  }
+
+  /**
+   * Set default account by phone
+   */
+  setDefaultAccountByPhone(phone: string): boolean {
+    const account = this.getAccountByPhone(phone);
+    if (!account) {
+      return false;
+    }
+
+    return this.setDefaultAccount(account.id);
   }
 
   private rowToAccount(row: SessionRow): Account {

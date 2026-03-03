@@ -93,6 +93,37 @@ export interface Account {
 }
 
 /**
+ * Auth flow state
+ */
+export type AuthState = 'none' | 'phone_sent' | 'code_required' | 'password_required' | 'authenticated';
+
+/**
+ * Auth status information
+ */
+export interface AuthStatus {
+  state: AuthState;
+  hasAccounts: boolean;
+  accountsCount: number;
+  activeAccount?: {
+    id: string;
+    phone: string;
+    username?: string;
+  };
+  requiresLogin: boolean;
+  pendingAuthPhone?: string;
+}
+
+/**
+ * Auth flow session data
+ */
+export interface AuthFlowSession {
+  phone: string;
+  codeHash?: string;
+  passwordHint?: string;
+  createdAt: number;
+}
+
+/**
  * Cache entry structure
  */
 export interface CacheEntry<T = unknown> {
