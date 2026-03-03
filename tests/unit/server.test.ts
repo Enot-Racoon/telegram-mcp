@@ -61,7 +61,7 @@ describe("TelegramMCPServer", () => {
       const telegramService = server.getTelegramService();
       await telegramService.login("+1234567890");
       const chats = await telegramService.getChats();
-      const messages = await telegramService.getMessages(chats[0].id, 10);
+      const messages = await telegramService.getMessages(chats[0].id, { limit: 10 });
       expect(messages.length).toBeGreaterThan(0);
       expect(messages.every((m) => m.chatId === chats[0].id)).toBe(true);
     });
@@ -70,7 +70,7 @@ describe("TelegramMCPServer", () => {
       const telegramService = server.getTelegramService();
       await telegramService.login("+1234567890");
       const chats = await telegramService.getChats();
-      const messages = await telegramService.getMessages(chats[0].id, 5);
+      const messages = await telegramService.getMessages(chats[0].id, { limit: 5 });
       expect(messages.length).toBeLessThanOrEqual(5);
     });
   });

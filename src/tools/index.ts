@@ -6,12 +6,26 @@
 
 export type { ToolDefinition, ToolHandler, ToolHandlerContext, ToolWithHandler } from "./types";
 
-// Chat tools
+// Chat operations
 import { listChatsTool } from "./listChats";
 import { getMessagesTool } from "./getMessages";
 import { sendMessageTool } from "./sendMessage";
 import { markAsReadTool } from "./markAsRead";
 import { getChatInfoTool } from "./getChatInfo";
+
+// Search & Resolve
+import { searchChatsTool } from "./search_chats";
+import { resolveChatTool } from "./resolve_chat";
+import { searchMessagesTool } from "./search_messages";
+
+// Message actions
+import { replyToMessageTool } from "./reply_to_message";
+import { editMessageTool } from "./edit_message";
+import { deleteMessageTool } from "./delete_message";
+
+// Updates & Unread
+import { getUnreadMessagesTool } from "./get_unread_messages";
+import { getUpdatesSinceTool } from "./get_updates_since";
 
 // Auth tools
 import { loginTool } from "./login";
@@ -37,6 +51,20 @@ export const tools = {
   send_message: sendMessageTool,
   mark_as_read: markAsReadTool,
   get_chat_info: getChatInfoTool,
+
+  // Search & Resolve
+  search_chats: searchChatsTool,
+  resolve_chat: resolveChatTool,
+  search_messages: searchMessagesTool,
+
+  // Message actions
+  reply_to_message: replyToMessageTool,
+  edit_message: editMessageTool,
+  delete_message: deleteMessageTool,
+
+  // Updates & Unread
+  get_unread_messages: getUnreadMessagesTool,
+  get_updates_since: getUpdatesSinceTool,
 
   // Auth operations
   login: loginTool,

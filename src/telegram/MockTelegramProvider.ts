@@ -1,6 +1,12 @@
 import type { Chat, Message, User, ChatInfo } from "~/types";
 
-import type { TelegramProvider, UserInfo } from "./TelegramProvider";
+import type {
+  TelegramProvider,
+  UserInfo,
+  GetMessagesOptions,
+  SearchMessagesOptions,
+  SendMessageOptions,
+} from "./TelegramProvider";
 
 /**
  * Mock Telegram provider for offline testing
@@ -247,7 +253,10 @@ export class MockTelegramProvider implements TelegramProvider {
     return Array.from(this.chats.values());
   }
 
-  async getMessages(chatId: string, limit: number): Promise<Message[]> {
+  async getMessages(
+    chatId: string,
+    options?: GetMessagesOptions & { limit?: number },
+  ): Promise<Message[]> {
     await this.simulateDelay();
     this.throwIfError();
 
@@ -256,10 +265,165 @@ export class MockTelegramProvider implements TelegramProvider {
     }
 
     const chatMessages = this.messages.get(chatId) || [];
-    return chatMessages.slice(0, limit);
+    let result = [...chatMessages];
+
+    // Apply filters
+    if (options?.afterId) {
+      const afterIndex = result.findIndex((m) => m.id === options.afterId);
+      if (afterIndex !== -1) {
+        result = result.slice(afterIndex + 1);
+      }
+    }
+
+    if (options?.beforeId) {
+      const beforeIndex = result.findIndex((m) => m.id === options.beforeId);
+      if (beforeIndex !== -1) {
+        result = result.slice(0, beforeIndex);
+      }
+    }
+
+    if (options?.offset) {
+      result = result.slice(options.offset);
+    }
+
+    if (options?.limit) {
+      result = result.slice(0, options.limit);
+    } else if (options?.limit !== 0) {
+      result = result.slice(0, 50);
+    }
+
+    return result;
   }
 
-  async sendMessage(chatId: string, text: string): Promise<void> {
+  async getChatInfo(chatId: string): Promise<ChatInfo | null> {
+    await this.simulateDelay();
+    this.throwIfError();
+
+    if (!this.isAuthenticatedFlag) {
+      throw new Error("Not authenticated");
+    }
+
+    const chat = this.chats.get(chatId);
+    if (!chat) {
+      return null;
+    }
+
+    const chatMessages = this.messages.get(chatId) || [];
+    const lastMessage = chatMessages.length > 0 ? chatMessages[0] : undefined;
+    const pinnedMessage = this.pinnedMessages.get(chatId);
+
+    return {
+      type: chat.type,
+      id: chat.id,
+      username: chat.username,
+      participantsCount: this.participantsCount.get(chatId),
+      lastMessage,
+      pinnedMessage,
+    };
+  }
+
+  async searchChats(query: string, limit: number = 20): Promise<Chat[]> {
+    await this.simulateDelay();
+    this.throwIfError();
+
+    if (!this.isAuthenticatedFlag) {
+      throw new Error("Not authenticated");
+    }
+
+    const lowerQuery = query.toLowerCase();
+    const allChats = Array.from(this.chats.values());
+
+    return allChats
+      .filter(
+        (chat) =>
+          chat.title.toLowerCase().includes(lowerQuery) ||
+          chat.username?.toLowerCase().includes(lowerQuery),
+      )
+      .slice(0, limit);
+  }
+
+  async resolveChat(ref: string): Promise<string | null> {
+    await this.simulateDelay();
+    this.throwIfError();
+
+    if (!this.isAuthenticatedFlag) {
+      throw new Error("Not authenticated");
+    }
+
+    // Handle different reference formats
+    let normalizedRef = ref;
+
+    // Remove @ prefix
+    if (normalizedRef.startsWith("@")) {
+      normalizedRef = normalizedRef.slice(1);
+    }
+
+    // Handle t.me links
+    if (normalizedRef.includes("t.me/")) {
+      const match = normalizedRef.match(/t\.me\/([^/?]+)/);
+      if (match) {
+        normalizedRef = match[1];
+      }
+    }
+
+    // Remove + prefix for phone-based usernames
+    if (normalizedRef.startsWith("+")) {
+      normalizedRef = normalizedRef.slice(1);
+    }
+
+    // Search by username
+    const allChats = Array.from(this.chats.values());
+    const chat = allChats.find(
+      (c) => c.username?.toLowerCase() === normalizedRef.toLowerCase(),
+    );
+
+    if (chat) {
+      return chat.id;
+    }
+
+    // Search by ID
+    if (this.chats.has(ref)) {
+      return ref;
+    }
+
+    return null;
+  }
+
+  async searchMessages(options: SearchMessagesOptions): Promise<Message[]> {
+    await this.simulateDelay();
+    this.throwIfError();
+
+    if (!this.isAuthenticatedFlag) {
+      throw new Error("Not authenticated");
+    }
+
+    const { query, chatId, limit = 20, fromUserId, minDate, maxDate } = options;
+    const lowerQuery = query.toLowerCase();
+
+    let messages: Message[] = [];
+
+    if (chatId) {
+      messages = this.messages.get(chatId) || [];
+    } else {
+      // Search across all chats
+      for (const chatMessages of this.messages.values()) {
+        messages = [...messages, ...chatMessages];
+      }
+    }
+
+    return messages
+      .filter((msg) => msg.text.toLowerCase().includes(lowerQuery))
+      .filter((msg) => (fromUserId ? msg.from.id === fromUserId : true))
+      .filter((msg) => (minDate ? msg.timestamp >= minDate : true))
+      .filter((msg) => (maxDate ? msg.timestamp <= maxDate : true))
+      .slice(0, limit);
+  }
+
+  async sendMessage(
+    chatId: string,
+    text: string,
+    options?: SendMessageOptions,
+  ): Promise<Message> {
     await this.simulateDelay();
     this.throwIfError();
 
@@ -295,9 +459,15 @@ export class MockTelegramProvider implements TelegramProvider {
 
     // Update last message
     chat.lastMessage = newMessage;
+
+    return newMessage;
   }
 
-  async getChatInfo(chatId: string): Promise<ChatInfo | null> {
+  async replyMessage(
+    chatId: string,
+    replyToMessageId: string,
+    text: string,
+  ): Promise<Message> {
     await this.simulateDelay();
     this.throwIfError();
 
@@ -307,21 +477,147 @@ export class MockTelegramProvider implements TelegramProvider {
 
     const chat = this.chats.get(chatId);
     if (!chat) {
-      return null;
+      throw new Error(`Chat not found: ${chatId}`);
+    }
+
+    // Find the message to reply to
+    const chatMessages = this.messages.get(chatId) || [];
+    const replyToMessage = chatMessages.find((m) => m.id === replyToMessageId);
+
+    if (!replyToMessage) {
+      throw new Error(`Message not found: ${replyToMessageId}`);
+    }
+
+    // Create a new message with reply
+    const newMessage: Message = {
+      id: `msg-${Date.now()}`,
+      chatId,
+      from: {
+        id: "current-user",
+        username: this.currentUser?.username,
+        firstName: this.currentUser?.firstName,
+        lastName: this.currentUser?.lastName,
+        isBot: false,
+      },
+      text,
+      timestamp: Date.now(),
+      isRead: true,
+      replyTo: replyToMessage,
+    };
+
+    // Add to messages
+    chatMessages.unshift(newMessage);
+    this.messages.set(chatId, chatMessages);
+
+    // Update last message
+    chat.lastMessage = newMessage;
+
+    return newMessage;
+  }
+
+  async editMessage(
+    chatId: string,
+    messageId: string,
+    newText: string,
+  ): Promise<Message> {
+    await this.simulateDelay();
+    this.throwIfError();
+
+    if (!this.isAuthenticatedFlag) {
+      throw new Error("Not authenticated");
     }
 
     const chatMessages = this.messages.get(chatId) || [];
-    const lastMessage = chatMessages.length > 0 ? chatMessages[0] : undefined;
-    const pinnedMessage = this.pinnedMessages.get(chatId);
+    const messageIndex = chatMessages.findIndex((m) => m.id === messageId);
 
-    return {
-      type: chat.type,
-      id: chat.id,
-      username: chat.username,
-      participantsCount: this.participantsCount.get(chatId),
-      lastMessage,
-      pinnedMessage,
+    if (messageIndex === -1) {
+      throw new Error(`Message not found: ${messageId}`);
+    }
+
+    // Edit the message
+    chatMessages[messageIndex] = {
+      ...chatMessages[messageIndex],
+      text: newText,
     };
+
+    this.messages.set(chatId, chatMessages);
+
+    return chatMessages[messageIndex];
+  }
+
+  async deleteMessage(
+    chatId: string,
+    messageId: string,
+  ): Promise<boolean> {
+    await this.simulateDelay();
+    this.throwIfError();
+
+    if (!this.isAuthenticatedFlag) {
+      throw new Error("Not authenticated");
+    }
+
+    const chatMessages = this.messages.get(chatId) || [];
+    const messageIndex = chatMessages.findIndex((m) => m.id === messageId);
+
+    if (messageIndex === -1) {
+      return false;
+    }
+
+    chatMessages.splice(messageIndex, 1);
+    this.messages.set(chatId, chatMessages);
+
+    return true;
+  }
+
+  async getUnreadMessages(
+    chatId?: string,
+    limit: number = 50,
+  ): Promise<Message[]> {
+    await this.simulateDelay();
+    this.throwIfError();
+
+    if (!this.isAuthenticatedFlag) {
+      throw new Error("Not authenticated");
+    }
+
+    let unreadMessages: Message[] = [];
+
+    if (chatId) {
+      const chatMessages = this.messages.get(chatId) || [];
+      unreadMessages = chatMessages.filter((m) => !m.isRead);
+    } else {
+      // Get unread from all chats
+      for (const messages of this.messages.values()) {
+        unreadMessages = [
+          ...unreadMessages,
+          ...messages.filter((m) => !m.isRead),
+        ];
+      }
+    }
+
+    return unreadMessages.slice(0, limit);
+  }
+
+  async getUpdatesSince(
+    chatId: string,
+    afterMessageId: string,
+    limit: number = 50,
+  ): Promise<Message[]> {
+    await this.simulateDelay();
+    this.throwIfError();
+
+    if (!this.isAuthenticatedFlag) {
+      throw new Error("Not authenticated");
+    }
+
+    const chatMessages = this.messages.get(chatId) || [];
+    const afterIndex = chatMessages.findIndex((m) => m.id === afterMessageId);
+
+    if (afterIndex === -1) {
+      return [];
+    }
+
+    return chatMessages.slice(0, afterIndex).slice(0, limit);
   }
 
   /**

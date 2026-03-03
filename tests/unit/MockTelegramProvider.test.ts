@@ -64,14 +64,14 @@ describe("MockTelegramProvider", () => {
 
   describe("getMessages", () => {
     it("should throw error when not authenticated", async () => {
-      await expect(provider.getMessages("chat-1", 10)).rejects.toThrow(
+      await expect(provider.getMessages("chat-1", { limit: 10 })).rejects.toThrow(
         "Not authenticated",
       );
     });
 
     it("should return messages for a chat", async () => {
       await provider.login("+1234567890");
-      const messages = await provider.getMessages("chat-1", 10);
+      const messages = await provider.getMessages("chat-1", { limit: 10 });
       expect(messages.length).toBeGreaterThan(0);
       expect(messages[0]).toHaveProperty("text");
       expect(messages[0]).toHaveProperty("timestamp");
@@ -79,13 +79,13 @@ describe("MockTelegramProvider", () => {
 
     it("should respect limit parameter", async () => {
       await provider.login("+1234567890");
-      const messages = await provider.getMessages("chat-1", 1);
+      const messages = await provider.getMessages("chat-1", { limit: 1 });
       expect(messages).toHaveLength(1);
     });
 
     it("should return empty array for non-existent chat", async () => {
       await provider.login("+1234567890");
-      const messages = await provider.getMessages("non-existent", 10);
+      const messages = await provider.getMessages("non-existent", { limit: 10 });
       expect(messages).toHaveLength(0);
     });
   });
@@ -114,7 +114,7 @@ describe("MockTelegramProvider", () => {
     it("should add message to chat messages", async () => {
       await provider.login("+1234567890");
       await provider.sendMessage("chat-1", "Test message");
-      const messages = await provider.getMessages("chat-1", 10);
+      const messages = await provider.getMessages("chat-1", { limit: 10 });
       expect(messages[0].text).toBe("Test message");
     });
   });

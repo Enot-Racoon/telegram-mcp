@@ -52,7 +52,7 @@ describe("TelegramService", () => {
   describe("getMessages", () => {
     it("should return messages from a chat", async () => {
       await service.login("+1234567890");
-      const messages = await service.getMessages("chat-1", 10);
+      const messages = await service.getMessages("chat-1", { limit: 10 });
       expect(messages.length).toBeGreaterThan(0);
     });
 
@@ -90,7 +90,7 @@ describe("TelegramService", () => {
   describe("searchMessages", () => {
     it("should find messages matching query", async () => {
       await service.login("+1234567890");
-      const messages = await service.searchMessages("chat-1", "Hey");
+      const messages = await service.searchMessages({ query: "Hey", chatId: "chat-1" });
       expect(messages.length).toBeGreaterThan(0);
       expect(messages.every((m) => m.text.toLowerCase().includes("hey"))).toBe(
         true,
@@ -99,7 +99,7 @@ describe("TelegramService", () => {
 
     it("should respect limit", async () => {
       await service.login("+1234567890");
-      const messages = await service.searchMessages("chat-1", "test", 5);
+      const messages = await service.searchMessages({ query: "test", chatId: "chat-1", limit: 5 });
       expect(messages.length).toBeLessThanOrEqual(5);
     });
   });

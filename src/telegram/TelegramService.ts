@@ -1,6 +1,6 @@
 import type { Chat, Message, ChatInfo } from "~/types";
 
-import type { TelegramProvider } from "./TelegramProvider";
+import type { TelegramProvider, GetMessagesOptions, SearchMessagesOptions, SendMessageOptions } from "./TelegramProvider";
 
 /**
  * Telegram service that wraps the provider with additional functionality
@@ -61,17 +61,95 @@ export class TelegramService {
   }
 
   /**
+   * Search chats by name or username
+   */
+  async searchChats(query: string, limit: number = 20): Promise<Chat[]> {
+    return this.provider.searchChats(query, limit);
+  }
+
+  /**
+   * Resolve a chat reference to chat_id
+   */
+  async resolveChat(ref: string): Promise<string | null> {
+    return this.provider.resolveChat(ref);
+  }
+
+  /**
    * Get messages from a chat
    */
-  async getMessages(chatId: string, limit: number = 50): Promise<Message[]> {
-    return this.provider.getMessages(chatId, limit);
+  async getMessages(
+    chatId: string,
+    options?: GetMessagesOptions & { limit?: number },
+  ): Promise<Message[]> {
+    return this.provider.getMessages(chatId, options);
+  }
+
+  /**
+   * Search messages by text
+   */
+  async searchMessages(options: SearchMessagesOptions): Promise<Message[]> {
+    return this.provider.searchMessages(options);
   }
 
   /**
    * Send a message to a chat
    */
-  async sendMessage(chatId: string, text: string): Promise<void> {
-    await this.provider.sendMessage(chatId, text);
+  async sendMessage(
+    chatId: string,
+    text: string,
+    options?: SendMessageOptions,
+  ): Promise<Message> {
+    return this.provider.sendMessage(chatId, text, options);
+  }
+
+  /**
+   * Reply to a message
+   */
+  async replyMessage(
+    chatId: string,
+    replyToMessageId: string,
+    text: string,
+  ): Promise<Message> {
+    return this.provider.replyMessage(chatId, replyToMessageId, text);
+  }
+
+  /**
+   * Edit a message
+   */
+  async editMessage(
+    chatId: string,
+    messageId: string,
+    newText: string,
+  ): Promise<Message> {
+    return this.provider.editMessage(chatId, messageId, newText);
+  }
+
+  /**
+   * Delete a message
+   */
+  async deleteMessage(chatId: string, messageId: string): Promise<boolean> {
+    return this.provider.deleteMessage(chatId, messageId);
+  }
+
+  /**
+   * Get unread messages
+   */
+  async getUnreadMessages(
+    chatId?: string,
+    limit: number = 50,
+  ): Promise<Message[]> {
+    return this.provider.getUnreadMessages(chatId, limit);
+  }
+
+  /**
+   * Get updates since a message
+   */
+  async getUpdatesSince(
+    chatId: string,
+    afterMessageId: string,
+    limit: number = 50,
+  ): Promise<Message[]> {
+    return this.provider.getUpdatesSince(chatId, afterMessageId, limit);
   }
 
   /**
@@ -83,19 +161,10 @@ export class TelegramService {
   }
 
   /**
-   * Search messages in a chat
+   * Get detailed information about a chat
    */
-  async searchMessages(
-    chatId: string,
-    query: string,
-    limit: number = 20,
-  ): Promise<Message[]> {
-    const messages = await this.provider.getMessages(chatId, 100);
-    const lowerQuery = query.toLowerCase();
-
-    return messages
-      .filter((msg) => msg.text.toLowerCase().includes(lowerQuery))
-      .slice(0, limit);
+  async getChatInfo(chatId: string): Promise<ChatInfo | null> {
+    return this.provider.getChatInfo(chatId);
   }
 
   /**
@@ -104,12 +173,5 @@ export class TelegramService {
   async getUnreadCount(): Promise<number> {
     const chats = await this.provider.listChats();
     return chats.reduce((sum, chat) => sum + chat.unreadCount, 0);
-  }
-
-  /**
-   * Get detailed information about a chat
-   */
-  async getChatInfo(chatId: string): Promise<ChatInfo | null> {
-    return this.provider.getChatInfo(chatId);
   }
 }
