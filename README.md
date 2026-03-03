@@ -68,6 +68,14 @@ This is the initial foundation stage with:
 | `login` | Legacy login (direct, mock) |
 | `is_authenticated` | Legacy auth check (mock) |
 
+### System & Admin
+
+| Tool | Description |
+|------|-------------|
+| `get_logs` | Query system logs with filters (level, tool, session, date range) |
+| `clear_cache` | Clear cache (all or by prefix) |
+| `get_cache_stats` | Get cache statistics (entries, hits/misses, hit rate, size) |
+
 ## Project Structure
 
 ```
@@ -412,6 +420,50 @@ Features:
 }
 ```
 
+### System & Admin
+
+```json
+// Query logs by level
+{
+  "name": "get_logs",
+  "arguments": {
+    "level": "error",
+    "limit": 50
+  }
+}
+
+// Query logs by tool and date range
+{
+  "name": "get_logs",
+  "arguments": {
+    "tool": "send_message",
+    "startDate": 1709251200000,
+    "endDate": 1709337600000,
+    "limit": 100
+  }
+}
+
+// Clear all cache
+{
+  "name": "clear_cache",
+  "arguments": {}
+}
+
+// Clear cache by prefix
+{
+  "name": "clear_cache",
+  "arguments": {
+    "prefix": "user:"
+  }
+}
+
+// Get cache statistics
+{
+  "name": "get_cache_stats",
+  "arguments": {}
+}
+```
+
 ## Testing
 
 All tests use the mock provider - no network access required.
@@ -437,9 +489,12 @@ npm run test:coverage
 - **Search & Resolve** (search_chats, resolve_chat, search_messages)
 - **Message actions** (reply_to_message, edit_message, delete_message)
 - **Updates & Unread** (get_unread_messages, get_updates_since)
+- **User Info & Dialogs** (get_user_info, list_recent_chats, get_dialogs_page, get_unread_count, get_last_message)
+- **Connection** (get_connection_status)
 - **Account management** (list_accounts, set_default_account, switch_account)
 - **Authentication** (login_start, login_submit_code, login_submit_password, logout)
 - **Status tools** (is_logged_in, get_auth_status, get_me, is_authenticated)
+- **System & Admin** (get_logs, clear_cache, get_cache_stats)
 
 ### Stage 2 - Real Integration
 - MTProto implementation
