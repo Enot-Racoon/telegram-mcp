@@ -11,3 +11,4 @@ scripts/demo-*.ts
 .telegram-mcp*
 .todo
 package-lock.json
+TECHNICAL_AUDIT.md
