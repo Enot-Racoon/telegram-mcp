@@ -125,7 +125,7 @@ export class TelegramMCPServer {
             },
           },
           {
-            name: "markAsRead",
+            name: "mark_as_read",
             description: "Mark messages in a chat as read.",
             inputSchema: {
               type: "object",
@@ -268,7 +268,7 @@ export class TelegramMCPServer {
             };
           }
 
-          case "markAsRead": {
+          case "mark_as_read": {
             const chatId = args?.chatId as string;
 
             if (!chatId) {
@@ -280,7 +280,7 @@ export class TelegramMCPServer {
 
             this.logger.logTool(
               "telegram",
-              "markAsRead",
+              "mark_as_read",
               { chatId },
               result,
               Date.now() - startTime,

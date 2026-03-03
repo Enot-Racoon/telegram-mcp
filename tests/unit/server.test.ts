@@ -95,6 +95,56 @@ describe("TelegramMCPServer", () => {
     });
   });
 
+  describe("login tool", () => {
+    it("should authenticate with valid phone number", async () => {
+      const telegramService = server.getTelegramService();
+      expect(telegramService.isAuthenticated()).toBe(false);
+
+      await telegramService.login("+1234567890");
+
+      expect(telegramService.isAuthenticated()).toBe(true);
+    });
+
+    it("should throw error for missing phone number", async () => {
+      const telegramService = server.getTelegramService();
+      // @ts-expect-error Testing invalid input
+      await expect(telegramService.login()).rejects.toThrow();
+    });
+
+    it("should accept different phone formats", async () => {
+      const telegramService = server.getTelegramService();
+
+      await expect(telegramService.login("+1234567890")).resolves.not.toThrow();
+      await expect(telegramService.login("+9876543210")).resolves.not.toThrow();
+    });
+  });
+
+  describe("isAuthenticated tool", () => {
+    it("should return false when not authenticated", () => {
+      const telegramService = server.getTelegramService();
+      expect(telegramService.isAuthenticated()).toBe(false);
+    });
+
+    it("should return true after login", async () => {
+      const telegramService = server.getTelegramService();
+
+      await telegramService.login("+1234567890");
+
+      expect(telegramService.isAuthenticated()).toBe(true);
+    });
+
+    it("should return false after logout", async () => {
+      const telegramService = server.getTelegramService();
+
+      await telegramService.login("+1234567890");
+      expect(telegramService.isAuthenticated()).toBe(true);
+
+      await telegramService.logout();
+
+      expect(telegramService.isAuthenticated()).toBe(false);
+    });
+  });
+
   describe("server lifecycle", () => {
     it("should start and stop", async () => {
       expect(server.getRunningStatus()).toBe(false);

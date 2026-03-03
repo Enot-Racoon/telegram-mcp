@@ -16,6 +16,9 @@ export class TelegramService {
    * Login to Telegram
    */
   async login(phone: string): Promise<void> {
+    if (!phone || typeof phone !== "string") {
+      throw new Error("phone is required and must be a string");
+    }
     await this.provider.login(phone);
   }
 
