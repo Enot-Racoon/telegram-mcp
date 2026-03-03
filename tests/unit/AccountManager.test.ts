@@ -167,4 +167,93 @@ describe("AccountManager", () => {
       expect(accountManager.count()).toBe(2);
     });
   });
+
+  describe("getAuthStatus", () => {
+    it("should return auth status with no accounts", () => {
+      const status = accountManager.getAuthStatus();
+      expect(status.hasAccounts).toBe(false);
+      expect(status.accountsCount).toBe(0);
+      expect(status.state).toBe("none");
+      expect(status.requiresLogin).toBe(true);
+      expect(status.activeAccount).toBeUndefined();
+    });
+
+    it("should return auth status with accounts but no active", () => {
+      accountManager.createAccount("+1111111111");
+      accountManager.createAccount("+2222222222");
+
+      const status = accountManager.getAuthStatus();
+      expect(status.hasAccounts).toBe(true);
+      expect(status.accountsCount).toBe(2);
+      expect(status.state).toBe("none");
+      expect(status.requiresLogin).toBe(true);
+    });
+
+    it("should return auth status with active account", () => {
+      const account = accountManager.createAccount("+1111111111");
+      accountManager.activateSession(account.id, "user-123", "testuser");
+
+      const status = accountManager.getAuthStatus();
+      expect(status.hasAccounts).toBe(true);
+      expect(status.accountsCount).toBe(1);
+      expect(status.state).toBe("authenticated");
+      expect(status.requiresLogin).toBe(false);
+      expect(status.activeAccount).toBeDefined();
+      expect(status.activeAccount?.phone).toBe("+1111111111");
+    });
+  });
+
+  describe("setDefaultAccount", () => {
+    it("should set account as active by ID", () => {
+      const account1 = accountManager.createAccount("+1111111111");
+      const account2 = accountManager.createAccount("+2222222222");
+
+      // Activate account1 first
+      accountManager.activateSession(account1.id, "user-1");
+
+      // Set account2 as default
+      const success = accountManager.setDefaultAccount(account2.id);
+      expect(success).toBe(true);
+
+      const status = accountManager.getAuthStatus();
+      expect(status.activeAccount?.id).toBe(account2.id);
+    });
+
+    it("should return false for non-existent account", () => {
+      const success = accountManager.setDefaultAccount("non-existent");
+      expect(success).toBe(false);
+    });
+
+    it("should deactivate other accounts when setting default", () => {
+      const account1 = accountManager.createAccount("+1111111111");
+      const account2 = accountManager.createAccount("+2222222222");
+
+      accountManager.activateSession(account1.id, "user-1");
+      accountManager.setDefaultAccount(account2.id);
+
+      const retrieved1 = accountManager.getAccount(account1.id);
+      const retrieved2 = accountManager.getAccount(account2.id);
+
+      expect(retrieved1?.session?.isActive).toBe(false);
+      expect(retrieved2?.session?.isActive).toBe(true);
+    });
+  });
+
+  describe("setDefaultAccountByPhone", () => {
+    it("should set account as active by phone", () => {
+      accountManager.createAccount("+1111111111");
+      const account2 = accountManager.createAccount("+2222222222");
+
+      const success = accountManager.setDefaultAccountByPhone("+2222222222");
+      expect(success).toBe(true);
+
+      const status = accountManager.getAuthStatus();
+      expect(status.activeAccount?.id).toBe(account2.id);
+    });
+
+    it("should return false for non-existent phone", () => {
+      const success = accountManager.setDefaultAccountByPhone("+9999999999");
+      expect(success).toBe(false);
+    });
+  });
 });
