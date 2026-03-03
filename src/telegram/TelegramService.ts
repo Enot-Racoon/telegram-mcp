@@ -1,6 +1,6 @@
 import type { Chat, Message, ChatInfo, User } from "~/types";
 
-import type { TelegramProvider, GetMessagesOptions, SearchMessagesOptions, SendMessageOptions, ConnectionStatus } from "./TelegramProvider";
+import type { TelegramProvider, GetMessagesOptions, SearchMessagesOptions, SendMessageOptions, ConnectionStatus, Participant, SubscriptionState, WaitForMessageOptions } from "./TelegramProvider";
 
 /**
  * Telegram service that wraps the provider with additional functionality
@@ -207,5 +207,54 @@ export class TelegramService {
    */
   async getConnectionStatus(): Promise<ConnectionStatus> {
     return this.provider.getConnectionStatus();
+  }
+
+  /**
+   * Send message to Saved Messages
+   */
+  async sendToSavedMessages(text: string): Promise<Message> {
+    return this.provider.sendToSavedMessages(text);
+  }
+
+  /**
+   * Get participants of a group/channel
+   */
+  async getParticipants(chatId: string, limit: number = 100, offset: number = 0) {
+    return this.provider.getParticipants(chatId, limit, offset);
+  }
+
+  /**
+   * Resolve peer reference to chat_id
+   */
+  async resolvePeer(ref: string): Promise<string | null> {
+    return this.provider.resolvePeer(ref);
+  }
+
+  /**
+   * Subscribe to chat for new messages
+   */
+  async subscribeToChat(chatId: string): Promise<SubscriptionState> {
+    return this.provider.subscribeToChat(chatId);
+  }
+
+  /**
+   * Unsubscribe from chat
+   */
+  async unsubscribeFromChat(chatId: string): Promise<boolean> {
+    return this.provider.unsubscribeFromChat(chatId);
+  }
+
+  /**
+   * Get active subscriptions
+   */
+  async getActiveSubscriptions(): Promise<SubscriptionState[]> {
+    return this.provider.getActiveSubscriptions();
+  }
+
+  /**
+   * Wait for new message
+   */
+  async waitForNewMessage(options?: WaitForMessageOptions): Promise<Message | null> {
+    return this.provider.waitForNewMessage(options);
   }
 }

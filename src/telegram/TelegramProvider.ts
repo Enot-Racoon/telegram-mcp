@@ -1,6 +1,39 @@
 import type { Chat, Message, ChatInfo, User } from "~/types";
 
 /**
+ * Participant information for get_participants tool
+ */
+export interface Participant {
+  id: string;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+  isBot: boolean;
+  role?: "creator" | "admin" | "member" | "left" | "kicked";
+  joinedAt?: number;
+}
+
+/**
+ * Subscription state for subscribe_to_chat tool
+ */
+export interface SubscriptionState {
+  chatId: string;
+  isActive: boolean;
+  lastMessageId?: string;
+  messageCount: number;
+  startedAt: number;
+}
+
+/**
+ * Options for wait_for_new_message tool
+ */
+export interface WaitForMessageOptions {
+  chatId?: string;
+  timeout?: number;
+  fromUserId?: string;
+}
+
+/**
  * Connection status for get_connection_status tool
  */
 export type ConnectionState = 'connected' | 'disconnected' | 'flood_wait' | 'rate_limited';
@@ -163,6 +196,41 @@ export interface TelegramProvider {
    * Get connection status
    */
   getConnectionStatus(): Promise<ConnectionStatus>;
+
+  /**
+   * Send a message to Saved Messages
+   */
+  sendToSavedMessages(text: string): Promise<Message>;
+
+  /**
+   * Get participants of a group/channel
+   */
+  getParticipants(chatId: string, limit?: number, offset?: number): Promise<{ participants: Participant[]; total: number }>;
+
+  /**
+   * Resolve and normalize peer reference (username, link, id, title) to chat_id
+   */
+  resolvePeer(ref: string): Promise<string | null>;
+
+  /**
+   * Subscribe to chat for new messages (polling-based)
+   */
+  subscribeToChat(chatId: string): Promise<SubscriptionState>;
+
+  /**
+   * Unsubscribe from chat
+   */
+  unsubscribeFromChat(chatId: string): Promise<boolean>;
+
+  /**
+   * Get active subscriptions
+   */
+  getActiveSubscriptions(): Promise<SubscriptionState[]>;
+
+  /**
+   * Wait for new message (blocking tool)
+   */
+  waitForNewMessage(options?: WaitForMessageOptions): Promise<Message | null>;
 }
 
 export interface UserInfo {

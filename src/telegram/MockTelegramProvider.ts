@@ -7,6 +7,9 @@ import type {
   SearchMessagesOptions,
   SendMessageOptions,
   ConnectionStatus,
+  Participant,
+  SubscriptionState,
+  WaitForMessageOptions,
 } from "./TelegramProvider";
 
 /**
@@ -38,6 +41,24 @@ export class MockTelegramProvider implements TelegramProvider {
 
   // Mock users for get_user_info
   private users: Map<string, User> = new Map();
+
+  // Mock participants for groups/channels
+  private participants: Map<string, Participant[]> = new Map([
+    ["chat-2", [ // Project Team group
+      { id: "user-1", username: "john_doe", firstName: "John", lastName: "Doe", isBot: false, role: "creator", joinedAt: Date.now() - 86400000 },
+      { id: "user-2", username: "jane_smith", firstName: "Jane", lastName: "Smith", isBot: false, role: "admin", joinedAt: Date.now() - 80000000 },
+      { id: "user-3", username: "bob_dev", firstName: "Bob", lastName: "Developer", isBot: false, role: "member", joinedAt: Date.now() - 70000000 },
+    ]],
+    ["chat-3", [ // Tech News channel
+      { id: "bot-1", username: "helper_bot", firstName: "Helper", lastName: "Bot", isBot: true, role: "creator", joinedAt: Date.now() - 100000000 },
+    ]],
+  ]);
+
+  // Subscriptions for subscribe_to_chat
+  private subscriptions: Map<string, SubscriptionState> = new Map();
+
+  // Saved Messages chat
+  private savedMessagesChatId = "saved_messages";
 
   constructor(options?: { simulateError?: boolean; delayMs?: number }) {
     this.simulateError = options?.simulateError ?? false;
@@ -748,6 +769,212 @@ export class MockTelegramProvider implements TelegramProvider {
     }
 
     return { ...this.connectionState };
+  }
+
+  async sendToSavedMessages(text: string): Promise<Message> {
+    await this.simulateDelay();
+    this.throwIfError();
+
+    if (!this.isAuthenticatedFlag) {
+      throw new Error("Not authenticated");
+    }
+
+    const newMessage: Message = {
+      id: `msg-${Date.now()}`,
+      chatId: this.savedMessagesChatId,
+      from: {
+        id: "current-user",
+        username: this.currentUser?.username,
+        firstName: this.currentUser?.firstName,
+        lastName: this.currentUser?.lastName,
+        isBot: false,
+      },
+      text,
+      timestamp: Date.now(),
+      isRead: true,
+    };
+
+    // Store in saved messages
+    const savedMessages = this.messages.get(this.savedMessagesChatId) || [];
+    savedMessages.unshift(newMessage);
+    this.messages.set(this.savedMessagesChatId, savedMessages);
+
+    return newMessage;
+  }
+
+  async getParticipants(chatId: string, limit: number = 100, offset: number = 0) {
+    await this.simulateDelay();
+    this.throwIfError();
+
+    if (!this.isAuthenticatedFlag) {
+      throw new Error("Not authenticated");
+    }
+
+    const chatParticipants = this.participants.get(chatId) || [];
+    const total = chatParticipants.length;
+    const participants = chatParticipants.slice(offset, offset + limit);
+
+    return { participants, total };
+  }
+
+  async resolvePeer(ref: string): Promise<string | null> {
+    await this.simulateDelay();
+    this.throwIfError();
+
+    if (!this.isAuthenticatedFlag) {
+      throw new Error("Not authenticated");
+    }
+
+    // Handle different reference formats
+    let normalizedRef = ref;
+
+    // Remove @ prefix
+    if (normalizedRef.startsWith("@")) {
+      normalizedRef = normalizedRef.slice(1);
+    }
+
+    // Handle t.me links
+    if (normalizedRef.includes("t.me/")) {
+      const match = normalizedRef.match(/t\.me\/([^/?]+)/);
+      if (match) {
+        normalizedRef = match[1];
+      }
+    }
+
+    // Handle t.me/c/ links (private channels/groups)
+    if (normalizedRef.includes("t.me/c/")) {
+      const match = normalizedRef.match(/t\.me\/c\/(\d+)/);
+      if (match) {
+        return `chat-${match[1]}`;
+      }
+    }
+
+    // Remove + prefix
+    if (normalizedRef.startsWith("+")) {
+      normalizedRef = normalizedRef.slice(1);
+    }
+
+    // Search by username
+    const allChats = Array.from(this.chats.values());
+    const chat = allChats.find(
+      (c) => c.username?.toLowerCase() === normalizedRef.toLowerCase(),
+    );
+
+    if (chat) {
+      return chat.id;
+    }
+
+    // Search by title
+    const chatByTitle = allChats.find(
+      (c) => c.title.toLowerCase() === normalizedRef.toLowerCase(),
+    );
+
+    if (chatByTitle) {
+      return chatByTitle.id;
+    }
+
+    // Search by ID
+    if (this.chats.has(ref)) {
+      return ref;
+    }
+
+    return null;
+  }
+
+  async subscribeToChat(chatId: string): Promise<SubscriptionState> {
+    await this.simulateDelay();
+    this.throwIfError();
+
+    if (!this.isAuthenticatedFlag) {
+      throw new Error("Not authenticated");
+    }
+
+    const chat = this.chats.get(chatId);
+    if (!chat) {
+      throw new Error(`Chat not found: ${chatId}`);
+    }
+
+    const chatMessages = this.messages.get(chatId) || [];
+    const lastMessageId = chatMessages.length > 0 ? chatMessages[0].id : undefined;
+
+    const state: SubscriptionState = {
+      chatId,
+      isActive: true,
+      lastMessageId,
+      messageCount: 0,
+      startedAt: Date.now(),
+    };
+
+    this.subscriptions.set(chatId, state);
+
+    return state;
+  }
+
+  async unsubscribeFromChat(chatId: string): Promise<boolean> {
+    await this.simulateDelay();
+
+    return this.subscriptions.delete(chatId);
+  }
+
+  async getActiveSubscriptions(): Promise<SubscriptionState[]> {
+    await this.simulateDelay();
+
+    return Array.from(this.subscriptions.values()).filter((s) => s.isActive);
+  }
+
+  async waitForNewMessage(options?: WaitForMessageOptions): Promise<Message | null> {
+    await this.simulateDelay();
+    this.throwIfError();
+
+    if (!this.isAuthenticatedFlag) {
+      throw new Error("Not authenticated");
+    }
+
+    const { chatId, timeout = 30000, fromUserId } = options || {};
+
+    // If chatId specified, wait for that chat
+    if (chatId) {
+      const chatMessages = this.messages.get(chatId) || [];
+      const subscription = this.subscriptions.get(chatId);
+      const lastKnownId = subscription?.lastMessageId;
+
+      // Find new messages since last known
+      const newMessages = chatMessages.filter((m) => {
+        if (lastKnownId && m.id <= lastKnownId) return false;
+        if (fromUserId && m.from.id !== fromUserId) return false;
+        return true;
+      });
+
+      if (newMessages.length > 0) {
+        // Update subscription state
+        if (subscription) {
+          subscription.lastMessageId = newMessages[0].id;
+          subscription.messageCount += newMessages.length;
+        }
+        return newMessages[0];
+      }
+    } else {
+      // Check all subscribed chats
+      for (const [cid, subscription] of this.subscriptions.entries()) {
+        const chatMessages = this.messages.get(cid) || [];
+        const lastKnownId = subscription.lastMessageId;
+
+        const newMessages = chatMessages.filter((m) => {
+          if (lastKnownId && m.id <= lastKnownId) return false;
+          if (fromUserId && m.from.id !== fromUserId) return false;
+          return true;
+        });
+
+        if (newMessages.length > 0) {
+          subscription.lastMessageId = newMessages[0].id;
+          subscription.messageCount += newMessages.length;
+          return newMessages[0];
+        }
+      }
+    }
+
+    // No new messages found (in real implementation, this would block/poll)
+    return null;
   }
 
   /**

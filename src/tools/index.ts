@@ -44,6 +44,13 @@ import { getLogsTool } from "./get_logs";
 import { clearCacheTool } from "./clear_cache";
 import { getCacheStatsTool } from "./get_cache_stats";
 
+// Advanced Chat Operations
+import { sendToSavedMessagesTool } from "./send_to_saved_messages";
+import { getParticipantsTool } from "./get_participants";
+import { resolvePeerTool } from "./resolve_peer";
+import { subscribeToChatTool } from "./subscribe_to_chat";
+import { waitForNewMessageTool } from "./wait_for_new_message";
+
 // Auth tools
 import { loginTool } from "./login";
 import { isAuthenticatedTool } from "./isAuthenticated";
@@ -99,6 +106,13 @@ export const tools = {
   get_logs: getLogsTool,
   clear_cache: clearCacheTool,
   get_cache_stats: getCacheStatsTool,
+
+  // Advanced Chat Operations
+  send_to_saved_messages: sendToSavedMessagesTool,
+  get_participants: getParticipantsTool,
+  resolve_peer: resolvePeerTool,
+  subscribe_to_chat: subscribeToChatTool,
+  wait_for_new_message: waitForNewMessageTool,
 
   // Auth operations
   login: loginTool,
