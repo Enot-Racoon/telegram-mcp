@@ -101,6 +101,7 @@ export class TelegramMCPServer {
         const result = await handler(args, {
           server: this.server,
           logger: this.logger,
+          cache: this.cache,
           telegramService: this.telegramService,
           accountManager: this.accountManager,
         });

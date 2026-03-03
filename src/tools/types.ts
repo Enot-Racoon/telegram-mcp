@@ -5,6 +5,7 @@ import type {
 } from "@modelcontextprotocol/sdk/types.js";
 
 import type { Logger } from "~/core/logging";
+import type { CacheManager } from "~/core/cache";
 import type { TelegramService } from "~/telegram/TelegramService";
 import type { AccountManager } from "~/accounts/AccountManager";
 
@@ -27,6 +28,7 @@ export interface ToolDefinition {
 export interface ToolHandlerContext {
   server: Server;
   logger: Logger;
+  cache: CacheManager;
   telegramService: TelegramService;
   accountManager: AccountManager;
 }

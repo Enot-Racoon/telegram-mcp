@@ -39,6 +39,11 @@ import { getConnectionStatusTool } from "./get_connection_status";
 import { listRecentChatsTool } from "./list_recent_chats";
 import { getDialogsPageTool } from "./get_dialogs_page";
 
+// System & Admin
+import { getLogsTool } from "./get_logs";
+import { clearCacheTool } from "./clear_cache";
+import { getCacheStatsTool } from "./get_cache_stats";
+
 // Auth tools
 import { loginTool } from "./login";
 import { isAuthenticatedTool } from "./isAuthenticated";
@@ -89,6 +94,11 @@ export const tools = {
   // Dialogs
   list_recent_chats: listRecentChatsTool,
   get_dialogs_page: getDialogsPageTool,
+
+  // System & Admin
+  get_logs: getLogsTool,
+  clear_cache: clearCacheTool,
+  get_cache_stats: getCacheStatsTool,
 
   // Auth operations
   login: loginTool,
