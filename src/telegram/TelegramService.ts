@@ -1,6 +1,6 @@
-import type { Chat, Message, ChatInfo } from "~/types";
+import type { Chat, Message, ChatInfo, User } from "~/types";
 
-import type { TelegramProvider, GetMessagesOptions, SearchMessagesOptions, SendMessageOptions } from "./TelegramProvider";
+import type { TelegramProvider, GetMessagesOptions, SearchMessagesOptions, SendMessageOptions, ConnectionStatus } from "./TelegramProvider";
 
 /**
  * Telegram service that wraps the provider with additional functionality
@@ -171,7 +171,41 @@ export class TelegramService {
    * Get unread messages count across all chats
    */
   async getUnreadCount(): Promise<number> {
-    const chats = await this.provider.listChats();
-    return chats.reduce((sum, chat) => sum + chat.unreadCount, 0);
+    return this.provider.getUnreadCount();
+  }
+
+  /**
+   * Get user info by ID
+   */
+  async getUserInfo(userId: string): Promise<User | null> {
+    return this.provider.getUserInfo(userId);
+  }
+
+  /**
+   * List chats sorted by last message time
+   */
+  async listRecentChats(limit: number = 50): Promise<Chat[]> {
+    return this.provider.listRecentChats(limit);
+  }
+
+  /**
+   * Get paginated dialogs
+   */
+  async getDialogsPage(offset: number = 0, limit: number = 20) {
+    return this.provider.getDialogsPage(offset, limit);
+  }
+
+  /**
+   * Get the last message from a chat
+   */
+  async getLastMessage(chatId: string): Promise<Message | null> {
+    return this.provider.getLastMessage(chatId);
+  }
+
+  /**
+   * Get connection status
+   */
+  async getConnectionStatus(): Promise<ConnectionStatus> {
+    return this.provider.getConnectionStatus();
   }
 }

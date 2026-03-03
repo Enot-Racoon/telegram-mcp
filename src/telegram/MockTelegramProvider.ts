@@ -6,6 +6,7 @@ import type {
   GetMessagesOptions,
   SearchMessagesOptions,
   SendMessageOptions,
+  ConnectionStatus,
 } from "./TelegramProvider";
 
 /**
@@ -18,6 +19,12 @@ export class MockTelegramProvider implements TelegramProvider {
   private simulateError = false;
   private delayMs: number;
 
+  // Connection state
+  private connectionState: ConnectionStatus = {
+    state: 'disconnected',
+    lastDisconnected: Date.now(),
+  };
+
   // In-memory storage
   private chats: Map<string, Chat> = new Map();
   private messages: Map<string, Message[]> = new Map();
@@ -28,6 +35,9 @@ export class MockTelegramProvider implements TelegramProvider {
     ["chat-2", 15], // Project Team group
     ["chat-3", 1250], // Tech News channel
   ]);
+
+  // Mock users for get_user_info
+  private users: Map<string, User> = new Map();
 
   constructor(options?: { simulateError?: boolean; delayMs?: number }) {
     this.simulateError = options?.simulateError ?? false;
@@ -86,6 +96,11 @@ export class MockTelegramProvider implements TelegramProvider {
         isBot: true,
       },
     };
+
+    // Store users in the map
+    Object.entries(users).forEach(([id, user]) => {
+      this.users.set(id, user);
+    });
 
     // Create mock chats
     const mockChats: Chat[] = [
@@ -618,6 +633,121 @@ export class MockTelegramProvider implements TelegramProvider {
     }
 
     return chatMessages.slice(0, afterIndex).slice(0, limit);
+  }
+
+  async getUserInfo(userId: string): Promise<User | null> {
+    await this.simulateDelay();
+    this.throwIfError();
+
+    if (!this.isAuthenticatedFlag) {
+      throw new Error("Not authenticated");
+    }
+
+    return this.users.get(userId) || null;
+  }
+
+  async listRecentChats(limit: number = 50): Promise<Chat[]> {
+    await this.simulateDelay();
+    this.throwIfError();
+
+    if (!this.isAuthenticatedFlag) {
+      throw new Error("Not authenticated");
+    }
+
+    const allChats = Array.from(this.chats.values());
+
+    // Sort by last message timestamp (most recent first)
+    allChats.sort((a, b) => {
+      const aTime = a.lastMessage?.timestamp || 0;
+      const bTime = b.lastMessage?.timestamp || 0;
+      return bTime - aTime;
+    });
+
+    return allChats.slice(0, limit);
+  }
+
+  async getDialogsPage(offset: number = 0, limit: number = 20) {
+    await this.simulateDelay();
+    this.throwIfError();
+
+    if (!this.isAuthenticatedFlag) {
+      throw new Error("Not authenticated");
+    }
+
+    const allChats = Array.from(this.chats.values());
+
+    // Sort by last message timestamp (most recent first)
+    allChats.sort((a, b) => {
+      const aTime = a.lastMessage?.timestamp || 0;
+      const bTime = b.lastMessage?.timestamp || 0;
+      return bTime - aTime;
+    });
+
+    const total = allChats.length;
+    const chats = allChats.slice(offset, offset + limit);
+
+    return {
+      chats,
+      total,
+      hasMore: offset + limit < total,
+    };
+  }
+
+  async getUnreadCount(): Promise<number> {
+    await this.simulateDelay();
+    this.throwIfError();
+
+    if (!this.isAuthenticatedFlag) {
+      throw new Error("Not authenticated");
+    }
+
+    const allChats = Array.from(this.chats.values());
+    return allChats.reduce((sum, chat) => sum + chat.unreadCount, 0);
+  }
+
+  async getLastMessage(chatId: string): Promise<Message | null> {
+    await this.simulateDelay();
+    this.throwIfError();
+
+    if (!this.isAuthenticatedFlag) {
+      throw new Error("Not authenticated");
+    }
+
+    const chat = this.chats.get(chatId);
+    if (!chat) {
+      return null;
+    }
+
+    const chatMessages = this.messages.get(chatId) || [];
+    return chatMessages.length > 0 ? chatMessages[0] : null;
+  }
+
+  async getConnectionStatus(): Promise<ConnectionStatus> {
+    await this.simulateDelay();
+
+    // Update connection state based on auth status
+    if (this.isAuthenticatedFlag) {
+      this.connectionState = {
+        state: 'connected',
+        lastConnected: Date.now(),
+      };
+    } else {
+      this.connectionState = {
+        state: 'disconnected',
+        lastDisconnected: Date.now(),
+      };
+    }
+
+    // Simulate flood wait if error simulation is enabled
+    if (this.simulateError) {
+      this.connectionState = {
+        state: 'flood_wait',
+        floodWaitSeconds: 60,
+        errorMessage: 'Too many requests',
+      };
+    }
+
+    return { ...this.connectionState };
   }
 
   /**

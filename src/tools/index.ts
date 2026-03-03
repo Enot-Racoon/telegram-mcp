@@ -26,6 +26,18 @@ import { deleteMessageTool } from "./delete_message";
 // Updates & Unread
 import { getUnreadMessagesTool } from "./get_unread_messages";
 import { getUpdatesSinceTool } from "./get_updates_since";
+import { getUnreadCountTool } from "./get_unread_count";
+import { getLastMessageTool } from "./get_last_message";
+
+// User Info
+import { getUserInfoTool } from "./get_user_info";
+
+// Connection
+import { getConnectionStatusTool } from "./get_connection_status";
+
+// Dialogs
+import { listRecentChatsTool } from "./list_recent_chats";
+import { getDialogsPageTool } from "./get_dialogs_page";
 
 // Auth tools
 import { loginTool } from "./login";
@@ -65,6 +77,18 @@ export const tools = {
   // Updates & Unread
   get_unread_messages: getUnreadMessagesTool,
   get_updates_since: getUpdatesSinceTool,
+  get_unread_count: getUnreadCountTool,
+  get_last_message: getLastMessageTool,
+
+  // User Info
+  get_user_info: getUserInfoTool,
+
+  // Connection
+  get_connection_status: getConnectionStatusTool,
+
+  // Dialogs
+  list_recent_chats: listRecentChatsTool,
+  get_dialogs_page: getDialogsPageTool,
 
   // Auth operations
   login: loginTool,

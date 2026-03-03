@@ -1,4 +1,20 @@
-import type { Chat, Message, ChatInfo } from "~/types";
+import type { Chat, Message, ChatInfo, User } from "~/types";
+
+/**
+ * Connection status for get_connection_status tool
+ */
+export type ConnectionState = 'connected' | 'disconnected' | 'flood_wait' | 'rate_limited';
+
+/**
+ * Connection status information
+ */
+export interface ConnectionStatus {
+  state: ConnectionState;
+  lastConnected?: number;
+  lastDisconnected?: number;
+  floodWaitSeconds?: number;
+  errorMessage?: string;
+}
 
 /**
  * Options for getting messages
@@ -117,6 +133,36 @@ export interface TelegramProvider {
    * Get the current user info
    */
   getCurrentUser(): Promise<UserInfo | null>;
+
+  /**
+   * Get user info by ID
+   */
+  getUserInfo(userId: string): Promise<User | null>;
+
+  /**
+   * List chats sorted by last message time (most recent first)
+   */
+  listRecentChats(limit?: number): Promise<Chat[]>;
+
+  /**
+   * Get paginated list of chats/dialogs
+   */
+  getDialogsPage(offset?: number, limit?: number): Promise<{ chats: Chat[]; total: number; hasMore: boolean }>;
+
+  /**
+   * Get total unread messages count
+   */
+  getUnreadCount(): Promise<number>;
+
+  /**
+   * Get the last message from a chat
+   */
+  getLastMessage(chatId: string): Promise<Message | null>;
+
+  /**
+   * Get connection status
+   */
+  getConnectionStatus(): Promise<ConnectionStatus>;
 }
 
 export interface UserInfo {
