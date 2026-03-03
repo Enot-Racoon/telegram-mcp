@@ -4,7 +4,6 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { z } from "zod";
 
 import type { Config } from "~/types";
 import { Logger } from "~/core/logging";
@@ -13,6 +12,10 @@ import { AccountManager } from "~/accounts/AccountManager";
 import { MockTelegramProvider } from "~/telegram/MockTelegramProvider";
 import { TelegramService } from "~/telegram/TelegramService";
 import { getDatabase, closeDatabase } from "~/core/database";
+import {
+  getToolDefinitions,
+  getToolHandler,
+} from "~/tools";
 
 /**
  * Telegram MCP Server
@@ -66,117 +69,7 @@ export class TelegramMCPServer {
       this.logger.debug("Listing available tools");
 
       return {
-        tools: [
-          {
-            name: "list_chats",
-            description:
-              "List all Telegram chats. Optionally filter by type (private, group, channel) or unread status.",
-            inputSchema: {
-              type: "object",
-              properties: {
-                type: {
-                  type: "string",
-                  enum: ["private", "group", "channel"],
-                  description: "Filter by chat type",
-                },
-                unreadOnly: {
-                  type: "boolean",
-                  description: "Only return chats with unread messages",
-                },
-              },
-            },
-          },
-          {
-            name: "get_messages",
-            description:
-              "Get messages from a specific chat. Returns up to 50 messages by default.",
-            inputSchema: {
-              type: "object",
-              properties: {
-                chatId: {
-                  type: "string",
-                  description: "The ID of the chat to get messages from",
-                },
-                limit: {
-                  type: "number",
-                  description:
-                    "Maximum number of messages to return (default: 50)",
-                },
-              },
-              required: ["chatId"],
-            },
-          },
-          {
-            name: "send_message",
-            description: "Send a text message to a chat.",
-            inputSchema: {
-              type: "object",
-              properties: {
-                chatId: {
-                  type: "string",
-                  description: "The ID of the chat to send message to",
-                },
-                text: {
-                  type: "string",
-                  description: "The message text to send",
-                },
-              },
-              required: ["chatId", "text"],
-            },
-          },
-          {
-            name: "mark_as_read",
-            description: "Mark messages in a chat as read.",
-            inputSchema: {
-              type: "object",
-              properties: {
-                chatId: {
-                  type: "string",
-                  description: "The ID of the chat to mark as read",
-                },
-              },
-              required: ["chatId"],
-            },
-          },
-          {
-            name: "login",
-            description: "Login to Telegram with a phone number.",
-            inputSchema: {
-              type: "object",
-              properties: {
-                phone: {
-                  type: "string",
-                  description:
-                    "Phone number in international format (e.g., +1234567890)",
-                },
-              },
-              required: ["phone"],
-            },
-          },
-          {
-            name: "is_authenticated",
-            description: "Check if the server is authenticated with Telegram.",
-            inputSchema: {
-              type: "object",
-              properties: {},
-            },
-          },
-          {
-            name: "get_chat_info",
-            description:
-              "Get detailed information about a chat: type, id, username, participants count, last message, pinned message.",
-            inputSchema: {
-              type: "object",
-              properties: {
-                chatId: {
-                  type: "string",
-                  description: "The ID of the chat to get information about",
-                },
-              },
-              required: ["chatId"],
-            },
-          },
-        ],
+        tools: getToolDefinitions(),
       };
     });
 
@@ -191,218 +84,35 @@ export class TelegramMCPServer {
       });
 
       try {
-        let result: unknown;
+        const handler = getToolHandler(name);
 
-        switch (name) {
-          case "list_chats": {
-            const chatType = args?.type as
-              | "private"
-              | "group"
-              | "channel"
-              | undefined;
-            const unreadOnly = args?.unreadOnly as boolean | undefined;
-
-            result = await this.telegramService.getChats({
-              type: chatType,
-              unreadOnly,
-            });
-
-            this.logger.logTool(
-              "telegram",
-              "list_chats",
-              { type: chatType, unreadOnly },
-              result,
-              Date.now() - startTime,
-            );
-
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: JSON.stringify(result, null, 2),
-                },
-              ],
-            };
-          }
-
-          case "get_messages": {
-            const chatId = args?.chatId as string;
-            const limit = args?.limit as number | undefined;
-
-            if (!chatId) {
-              throw new Error("chatId is required");
-            }
-
-            result = await this.telegramService.getMessages(chatId, limit);
-
-            this.logger.logTool(
-              "telegram",
-              "get_messages",
-              { chatId, limit },
-              result,
-              Date.now() - startTime,
-            );
-
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: JSON.stringify(result, null, 2),
-                },
-              ],
-            };
-          }
-
-          case "send_message": {
-            const chatId = args?.chatId as string;
-            const text = args?.text as string;
-
-            if (!chatId || !text) {
-              throw new Error("chatId and text are required");
-            }
-
-            await this.telegramService.sendMessage(chatId, text);
-
-            result = { success: true, chatId, text };
-
-            this.logger.logTool(
-              "telegram",
-              "send_message",
-              { chatId, text },
-              result,
-              Date.now() - startTime,
-            );
-
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: JSON.stringify(result, null, 2),
-                },
-              ],
-            };
-          }
-
-          case "mark_as_read": {
-            const chatId = args?.chatId as string;
-
-            if (!chatId) {
-              throw new Error("chatId is required");
-            }
-
-            // Stage 1: Mock implementation
-            result = { success: true, chatId };
-
-            this.logger.logTool(
-              "telegram",
-              "mark_as_read",
-              { chatId },
-              result,
-              Date.now() - startTime,
-            );
-
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: JSON.stringify(result, null, 2),
-                },
-              ],
-            };
-          }
-
-          case "login": {
-            const phone = args?.phone as string;
-
-            if (!phone) {
-              throw new Error("phone is required");
-            }
-
-            await this.telegramService.login(phone);
-            result = { success: true, phone };
-
-            this.logger.logTool(
-              "telegram",
-              "login",
-              { phone },
-              result,
-              Date.now() - startTime,
-            );
-
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: JSON.stringify(result, null, 2),
-                },
-              ],
-            };
-          }
-
-          case "is_authenticated": {
-            const authStatus = this.telegramService.isAuthenticated();
-            result = { authenticated: authStatus };
-
-            this.logger.logTool(
-              "telegram",
-              "is_authenticated",
-              {},
-              result,
-              Date.now() - startTime,
-            );
-
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: JSON.stringify(result, null, 2),
-                },
-              ],
-            };
-          }
-
-          case "get_chat_info": {
-            const chatId = args?.chatId as string;
-
-            if (!chatId) {
-              throw new Error("chatId is required");
-            }
-
-            result = await this.telegramService.getChatInfo(chatId);
-
-            if (!result) {
-              throw new Error(`Chat not found: ${chatId}`);
-            }
-
-            this.logger.logTool(
-              "telegram",
-              "get_chat_info",
-              { chatId },
-              result,
-              Date.now() - startTime,
-            );
-
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: JSON.stringify(result, null, 2),
-                },
-              ],
-            };
-          }
-
-          default:
-            return {
-              content: [
-                {
-                  type: "text",
-                  text: `Unknown tool: ${name}`,
-                },
-              ],
-              isError: true,
-            };
+        if (!handler) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: `Unknown tool: ${name}`,
+              },
+            ],
+            isError: true,
+          };
         }
+
+        const result = await handler(args, {
+          server: this.server,
+          logger: this.logger,
+          telegramService: this.telegramService,
+        });
+
+        this.logger.logTool(
+          "telegram",
+          name,
+          args || {},
+          result,
+          Date.now() - startTime,
+        );
+
+        return result;
       } catch (error) {
         const errorMessage =
           error instanceof Error ? error.message : String(error);
