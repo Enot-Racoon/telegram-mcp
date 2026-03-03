@@ -76,6 +76,16 @@ This is the initial foundation stage with:
 | `clear_cache` | Clear cache (all or by prefix) |
 | `get_cache_stats` | Get cache statistics (entries, hits/misses, hit rate, size) |
 
+### Advanced Chat Operations
+
+| Tool | Description |
+|------|-------------|
+| `send_to_saved_messages` | Send message to your Saved Messages (personal cloud storage) |
+| `get_participants` | Get group/channel participants with roles (creator/admin/member) |
+| `resolve_peer` | Normalize @username, t.me/link, title, or ID to internal chat_id |
+| `subscribe_to_chat` | Subscribe to chat for polling-based new message detection |
+| `wait_for_new_message` | Blocking wait for new messages in subscribed chats |
+
 ## Project Structure
 
 ```
@@ -464,6 +474,77 @@ Features:
 }
 ```
 
+### Advanced Chat Operations
+
+```json
+// Send to Saved Messages
+{
+  "name": "send_to_saved_messages",
+  "arguments": {
+    "text": "Important note to remember"
+  }
+}
+
+// Get group participants
+{
+  "name": "get_participants",
+  "arguments": {
+    "chatId": "chat-123",
+    "limit": 50,
+    "offset": 0
+  }
+}
+
+// Resolve peer reference to chat_id
+{
+  "name": "resolve_peer",
+  "arguments": {
+    "ref": "@my_channel"
+  }
+}
+
+// Resolve t.me link
+{
+  "name": "resolve_peer",
+  "arguments": {
+    "ref": "t.me/my_channel"
+  }
+}
+
+// Resolve by chat title
+{
+  "name": "resolve_peer",
+  "arguments": {
+    "ref": "Project Team"
+  }
+}
+
+// Subscribe to chat for new messages
+{
+  "name": "subscribe_to_chat",
+  "arguments": {
+    "chatId": "chat-123"
+  }
+}
+
+// Wait for new message in subscribed chat
+{
+  "name": "wait_for_new_message",
+  "arguments": {
+    "chatId": "chat-123"
+  }
+}
+
+// Wait for message from specific user
+{
+  "name": "wait_for_new_message",
+  "arguments": {
+    "chatId": "chat-123",
+    "fromUserId": "user-456"
+  }
+}
+```
+
 ## Testing
 
 All tests use the mock provider - no network access required.
@@ -495,6 +576,7 @@ npm run test:coverage
 - **Authentication** (login_start, login_submit_code, login_submit_password, logout)
 - **Status tools** (is_logged_in, get_auth_status, get_me, is_authenticated)
 - **System & Admin** (get_logs, clear_cache, get_cache_stats)
+- **Advanced Chat** (send_to_saved_messages, get_participants, resolve_peer, subscribe_to_chat, wait_for_new_message)
 
 ### Stage 2 - Real Integration
 - MTProto implementation
