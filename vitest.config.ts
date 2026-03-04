@@ -5,7 +5,6 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    pool: 'forks', // Use Node.js worker threads instead of Bun
     setupFiles: ['./tests/setup.ts'],
     include: ['tests/**/*.test.ts'],
     coverage: {

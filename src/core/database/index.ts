@@ -1,61 +1,55 @@
-import { drizzle } from "drizzle-orm/better-sqlite3";
 import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
-
-import * as schema from "./schema";
+import { BetterSqliteAdapter } from "./BetterSqliteAdapter";
 
 export * from "./schema";
+export type { DatabaseAdapter } from "./DatabaseAdapter";
+export { BetterSqliteAdapter } from "./BetterSqliteAdapter";
 
 /**
  * Initialize the SQLite database with Drizzle ORM
+ * Returns a BetterSqliteAdapter instance
  */
-export function initializeDatabase(dbPath: string): Database.Database {
+export function initializeDatabase(dbPath: string): BetterSqliteAdapter {
   // Ensure directory exists
   const dir = path.dirname(dbPath);
   if (!fs.existsSync(dir)) {
     fs.mkdirSync(dir, { recursive: true });
   }
 
-  const db = new Database(dbPath);
-
-  // Enable WAL mode for better concurrency
-  db.pragma("journal_mode = WAL");
-
-  return db;
+  return new BetterSqliteAdapter(dbPath);
 }
 
 /**
- * Get Drizzle database instance with schema
+ * Create an in-memory database adapter (for testing)
  */
-export function getDrizzleDb(db: Database.Database) {
-  return drizzle(db, { schema });
+export function createInMemoryDatabase(): BetterSqliteAdapter {
+  return new BetterSqliteAdapter(":memory:");
 }
 
 /**
  * Close the database connection
  */
-export function closeDatabase(db: Database.Database): void {
-  if (db && typeof db.close === "function") {
-    db.close();
-  }
+export function closeDatabase(adapter: BetterSqliteAdapter): void {
+  adapter.close();
 }
 
 /**
- * Get the database instance (singleton pattern for testing)
+ * Get the database instance (singleton pattern for production)
  */
-let dbInstance: Database.Database | null = null;
+let adapterInstance: BetterSqliteAdapter | null = null;
 
-export function getDatabase(dbPath: string): Database.Database {
-  if (!dbInstance) {
-    dbInstance = initializeDatabase(dbPath);
+export function getDatabase(dbPath: string): BetterSqliteAdapter {
+  if (!adapterInstance) {
+    adapterInstance = initializeDatabase(dbPath);
   }
-  return dbInstance;
+  return adapterInstance;
 }
 
 export function resetDatabaseInstance(): void {
-  if (dbInstance) {
-    dbInstance.close();
-    dbInstance = null;
+  if (adapterInstance) {
+    adapterInstance.close();
+    adapterInstance = null;
   }
 }

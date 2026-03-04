@@ -1,47 +1,31 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import Database from "better-sqlite3";
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { tmpdir } from "node:os";
+import { describe, it, expect, beforeEach } from "vitest";
 
 import { CacheManager } from "~/core/cache";
 import { Logger } from "~/core/logging";
 import { AccountManager } from "~/accounts/AccountManager";
 import { TelegramService } from "~/telegram/TelegramService";
 import { MockTelegramProvider } from "~/telegram/MockTelegramProvider";
-import { initializeDatabase, closeDatabase } from "~/core/database";
-
-import { applyMigrations } from "../setup";
+import { DatabaseAdapters } from "~/server";
 
 /**
  * Integration tests for the complete system
  * Tests interaction between multiple components
  */
 describe("Integration Tests", () => {
-  let db: Database.Database;
   let cache: CacheManager;
   let logger: Logger;
   let accountManager: AccountManager;
   let telegramService: TelegramService;
-  let dbPath: string;
+  let adapters: ReturnType<typeof DatabaseAdapters.createInMemory>;
 
   beforeEach(() => {
-    dbPath = path.join(tmpdir(), `test-integration-${Date.now()}.db`);
-    db = initializeDatabase(dbPath);
-    applyMigrations(db);
-    cache = new CacheManager(db);
-    logger = new Logger(db, "debug");
-    accountManager = new AccountManager(db);
+    adapters = DatabaseAdapters.createInMemory();
+    cache = new CacheManager(adapters.cacheRepository);
+    logger = new Logger(adapters.logRepository, "debug");
+    accountManager = new AccountManager(adapters.accountRepository);
     telegramService = new TelegramService(
       new MockTelegramProvider({ delayMs: 0 }),
     );
-  });
-
-  afterEach(() => {
-    closeDatabase(db);
-    if (fs.existsSync(dbPath)) {
-      fs.unlinkSync(dbPath);
-    }
   });
 
   describe("Account and Session Flow", () => {

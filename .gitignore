@@ -6,9 +6,7 @@ dist/
 *.db-wal
 *.log
 .DS_Store
-
-scripts/demo-*.ts
+.qwen*
 .telegram-mcp*
-.todo
+scripts/demo-*.ts
 package-lock.json
-TECHNICAL_AUDIT.md

@@ -2,10 +2,13 @@ import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
 
+import type { BetterSqliteAdapter } from "~/core/database";
+
 /**
  * Apply migrations to a test database
  */
-export function applyMigrations(db: Database.Database): void {
+export function applyMigrations(adapter: BetterSqliteAdapter): void {
+  const db = adapter.getRawDatabase();
   const migrationsDir = path.join(process.cwd(), "drizzle");
 
   if (!fs.existsSync(migrationsDir)) {

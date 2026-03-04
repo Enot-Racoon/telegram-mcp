@@ -1,34 +1,20 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import Database from "better-sqlite3";
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { tmpdir } from "node:os";
+import { describe, it, expect, beforeEach } from "vitest";
 
 import { Logger } from "~/core/logging";
 import { CacheManager } from "~/core/cache";
-import { initializeDatabase, closeDatabase } from "~/core/database";
-
-import { applyMigrations } from "../setup";
+import { InMemoryLogRepository, InMemoryCacheRepository } from "~/core/repositories";
 
 describe("System Tools", () => {
-  let db: Database.Database;
-  let dbPath: string;
   let logger: Logger;
   let cache: CacheManager;
+  let logRepository: InMemoryLogRepository;
+  let cacheRepository: InMemoryCacheRepository;
 
   beforeEach(() => {
-    dbPath = path.join(tmpdir(), `test-system-${Date.now()}.db`);
-    db = initializeDatabase(dbPath);
-    applyMigrations(db);
-    logger = new Logger(db, "debug");
-    cache = new CacheManager(db);
-  });
-
-  afterEach(() => {
-    closeDatabase(db);
-    if (fs.existsSync(dbPath)) {
-      fs.unlinkSync(dbPath);
-    }
+    logRepository = new InMemoryLogRepository();
+    cacheRepository = new InMemoryCacheRepository();
+    logger = new Logger(logRepository, "debug");
+    cache = new CacheManager(cacheRepository);
   });
 
   describe("get_logs", () => {
@@ -124,7 +110,7 @@ describe("System Tools", () => {
   describe("get_cache_stats", () => {
     it("should return cache statistics", async () => {
       const stats = await cache.stats();
-      
+
       expect(stats).toHaveProperty("totalEntries");
       expect(stats).toHaveProperty("expiredEntries");
       expect(stats).toHaveProperty("hitCount");
@@ -134,7 +120,7 @@ describe("System Tools", () => {
 
     it("should track hit and miss counts", async () => {
       await cache.set("key1", "value1");
-      
+
       // Get existing key (hit)
       await cache.get("key1");
       // Get non-existing key (miss)
@@ -157,7 +143,7 @@ describe("System Tools", () => {
     it("should count expired entries", async () => {
       // Set with very short TTL
       await cache.set("expiring", "value", 1);
-      
+
       // Wait for expiration
       await new Promise((resolve) => setTimeout(resolve, 10));
 

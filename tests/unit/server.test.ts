@@ -1,36 +1,21 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import Database from "better-sqlite3";
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { tmpdir } from "node:os";
+import { describe, it, expect, beforeEach } from "vitest";
 
-import { TelegramMCPServer } from "~/server";
+import { TelegramMCPServer, DatabaseAdapters } from "~/server";
 import { getConfig } from "~/core/config";
-import { initializeDatabase, closeDatabase } from "~/core/database";
-import { applyMigrations } from "../setup";
 
 describe("TelegramMCPServer", () => {
   let server: TelegramMCPServer;
-  let db: Database.Database;
-  let dbPath: string;
 
   beforeEach(() => {
-    dbPath = path.join(tmpdir(), `test-server-${Date.now()}.db`);
-    
-    // Initialize database and apply migrations
-    db = initializeDatabase(dbPath);
-    applyMigrations(db);
-
     const config = getConfig();
-    config.databasePath = dbPath;
-    server = new TelegramMCPServer(config);
-  });
-
-  afterEach(() => {
-    closeDatabase(db);
-    if (fs.existsSync(dbPath)) {
-      fs.unlinkSync(dbPath);
-    }
+    const adapters = DatabaseAdapters.createInMemory();
+    
+    server = new TelegramMCPServer(config, {
+      useInMemory: true,
+      accountRepository: adapters.accountRepository,
+      cacheRepository: adapters.cacheRepository,
+      logRepository: adapters.logRepository,
+    });
   });
 
   describe("listChats tool", () => {
@@ -80,9 +65,9 @@ describe("TelegramMCPServer", () => {
       const telegramService = server.getTelegramService();
       await telegramService.login("+1234567890");
       const chats = await telegramService.getChats();
-      await expect(
-        telegramService.sendMessage(chats[0].id, "Test message"),
-      ).resolves.not.toThrow();
+      const result = await telegramService.sendMessage(chats[0].id, "Test message");
+      expect(result).toBeDefined();
+      expect(result.text).toBe("Test message");
     });
   });
 

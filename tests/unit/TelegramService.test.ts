@@ -66,9 +66,9 @@ describe("TelegramService", () => {
   describe("sendMessage", () => {
     it("should send a message", async () => {
       await service.login("+1234567890");
-      await expect(
-        service.sendMessage("chat-1", "Hello"),
-      ).resolves.not.toThrow();
+      const result = await service.sendMessage("chat-1", "Hello");
+      expect(result).toBeDefined();
+      expect(result.text).toBe("Hello");
     });
   });
 

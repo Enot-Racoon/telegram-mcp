@@ -99,9 +99,9 @@ describe("MockTelegramProvider", () => {
 
     it("should send a message successfully", async () => {
       await provider.login("+1234567890");
-      await expect(
-        provider.sendMessage("chat-1", "Hello"),
-      ).resolves.not.toThrow();
+      const result = await provider.sendMessage("chat-1", "Hello");
+      expect(result).toBeDefined();
+      expect(result.text).toBe("Hello");
     });
 
     it("should throw error for non-existent chat", async () => {
@@ -129,7 +129,8 @@ describe("MockTelegramProvider", () => {
 
     it("should not throw error when simulation is disabled", async () => {
       provider.setSimulateError(false);
-      await expect(provider.login("+1234567890")).resolves.not.toThrow();
+      const result = await provider.login("+1234567890");
+      expect(result).toBeUndefined();
     });
   });
 

@@ -1,35 +1,19 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 
 import { AccountManager } from "~/accounts/AccountManager";
 import { TelegramService } from "~/telegram/TelegramService";
 import { MockTelegramProvider } from "~/telegram/MockTelegramProvider";
-import { initializeDatabase, closeDatabase } from "~/core/database";
-import { applyMigrations } from "../setup";
-
-import Database from "better-sqlite3";
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { tmpdir } from "node:os";
+import { InMemoryAccountRepository } from "~/core/repositories";
 
 describe("AUTH Tools", () => {
-  let db: Database.Database;
-  let dbPath: string;
   let accountManager: AccountManager;
+  let accountRepository: InMemoryAccountRepository;
   let telegramService: TelegramService;
 
   beforeEach(() => {
-    dbPath = path.join(tmpdir(), `test-auth-${Date.now()}.db`);
-    db = initializeDatabase(dbPath);
-    applyMigrations(db);
-    accountManager = new AccountManager(db);
+    accountRepository = new InMemoryAccountRepository();
+    accountManager = new AccountManager(accountRepository);
     telegramService = new TelegramService(new MockTelegramProvider({ delayMs: 0 }));
-  });
-
-  afterEach(() => {
-    closeDatabase(db);
-    if (fs.existsSync(dbPath)) {
-      fs.unlinkSync(dbPath);
-    }
   });
 
   describe("login_start", () => {

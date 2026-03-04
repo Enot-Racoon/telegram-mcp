@@ -11,11 +11,73 @@ import { CacheManager } from "~/core/cache";
 import { AccountManager } from "~/accounts/AccountManager";
 import { MockTelegramProvider } from "~/telegram/MockTelegramProvider";
 import { TelegramService } from "~/telegram/TelegramService";
-import { getDatabase, closeDatabase } from "~/core/database";
+import {
+  getDatabase,
+  closeDatabase,
+  initializeDatabase,
+  createInMemoryDatabase,
+  type BetterSqliteAdapter,
+} from "~/core/database";
+import {
+  SqliteAccountRepository,
+  SqliteCacheRepository,
+  SqliteLogRepository,
+  InMemoryAccountRepository,
+  InMemoryCacheRepository,
+  InMemoryLogRepository,
+  type AccountRepository,
+  type CacheRepository,
+  type LogRepository,
+} from "~/core/repositories";
 import {
   getToolDefinitions,
   getToolHandler,
 } from "~/tools";
+
+/**
+ * Database adapters factory
+ */
+export class DatabaseAdapters {
+  static createSqlite(dbPath: string): {
+    adapter: BetterSqliteAdapter;
+    accountRepository: SqliteAccountRepository;
+    cacheRepository: SqliteCacheRepository;
+    logRepository: SqliteLogRepository;
+  } {
+    const adapter = initializeDatabase(dbPath);
+    
+    const accountRepository = new SqliteAccountRepository(adapter);
+    const cacheRepository = new SqliteCacheRepository(adapter);
+    const logRepository = new SqliteLogRepository(adapter);
+
+    return {
+      adapter,
+      accountRepository,
+      cacheRepository,
+      logRepository,
+    };
+  }
+
+  static createInMemory(): {
+    adapter: BetterSqliteAdapter;
+    accountRepository: InMemoryAccountRepository;
+    cacheRepository: InMemoryCacheRepository;
+    logRepository: InMemoryLogRepository;
+  } {
+    const adapter = createInMemoryDatabase();
+    
+    const accountRepository = new InMemoryAccountRepository();
+    const cacheRepository = new InMemoryCacheRepository();
+    const logRepository = new InMemoryLogRepository();
+
+    return {
+      adapter,
+      accountRepository,
+      cacheRepository,
+      logRepository,
+    };
+  }
+}
 
 /**
  * Telegram MCP Server
@@ -31,17 +93,43 @@ export class TelegramMCPServer {
   private telegramService: TelegramService;
   private config: Config;
   private isRunning = false;
+  private adapter: BetterSqliteAdapter | null = null;
 
-  constructor(config: Config) {
+  constructor(
+    config: Config,
+    options?: {
+      useInMemory?: boolean;
+      accountRepository?: InMemoryAccountRepository;
+      cacheRepository?: InMemoryCacheRepository;
+      logRepository?: InMemoryLogRepository;
+    },
+  ) {
     this.config = config;
 
-    // Initialize database
-    const db = getDatabase(config.databasePath);
+    // Initialize repositories
+    let accountRepo: AccountRepository;
+    let cacheRepo: CacheRepository;
+    let logRepo: LogRepository;
 
-    // Initialize components
-    this.logger = new Logger(db, config.logLevel);
-    this.cache = new CacheManager(db);
-    this.accountManager = new AccountManager(db);
+    if (options?.useInMemory || (options?.accountRepository && options?.cacheRepository && options?.logRepository)) {
+      // Use provided in-memory repositories or create new ones
+      accountRepo = options.accountRepository ?? new InMemoryAccountRepository();
+      cacheRepo = options.cacheRepository ?? new InMemoryCacheRepository();
+      logRepo = options.logRepository ?? new InMemoryLogRepository();
+    } else {
+      // Use SQLite repositories
+      const db = getDatabase(config.databasePath);
+      this.adapter = db;
+
+      accountRepo = new SqliteAccountRepository(db);
+      cacheRepo = new SqliteCacheRepository(db);
+      logRepo = new SqliteLogRepository(db);
+    }
+
+    // Initialize components with repositories
+    this.logger = new Logger(logRepo, config.logLevel);
+    this.cache = new CacheManager(cacheRepo);
+    this.accountManager = new AccountManager(accountRepo);
 
     // Initialize Telegram service with mock provider
     const mockProvider = new MockTelegramProvider();
@@ -196,7 +284,10 @@ export class TelegramMCPServer {
     });
 
     await this.server.close();
-    closeDatabase(getDatabase(this.config.databasePath));
+    
+    if (this.adapter) {
+      closeDatabase(this.adapter);
+    }
 
     this.isRunning = false;
   }

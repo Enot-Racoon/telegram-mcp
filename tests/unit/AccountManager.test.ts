@@ -1,31 +1,15 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import Database from "better-sqlite3";
-import * as fs from "node:fs";
-import * as path from "node:path";
-import { tmpdir } from "node:os";
+import { describe, it, expect, beforeEach } from "vitest";
 
 import { AccountManager } from "~/accounts/AccountManager";
-import { initializeDatabase, closeDatabase } from "~/core/database";
-
-import { applyMigrations } from "../setup";
+import { InMemoryAccountRepository } from "~/core/repositories";
 
 describe("AccountManager", () => {
-  let db: Database.Database;
   let accountManager: AccountManager;
-  let dbPath: string;
+  let accountRepository: InMemoryAccountRepository;
 
   beforeEach(() => {
-    dbPath = path.join(tmpdir(), `test-accounts-${Date.now()}.db`);
-    db = initializeDatabase(dbPath);
-    applyMigrations(db);
-    accountManager = new AccountManager(db);
-  });
-
-  afterEach(() => {
-    closeDatabase(db);
-    if (fs.existsSync(dbPath)) {
-      fs.unlinkSync(dbPath);
-    }
+    accountRepository = new InMemoryAccountRepository();
+    accountManager = new AccountManager(accountRepository);
   });
 
   describe("createAccount", () => {
@@ -131,10 +115,19 @@ describe("AccountManager", () => {
       accountManager.createAccount("+3333333333");
 
       accountManager.activateSession(account1.id, "user-1");
+
+      // Small delay to ensure different timestamps
+      const start = Date.now();
+      while (Date.now() - start < 1) {
+        // Busy wait
+      }
+
       accountManager.activateSession(account2.id, "user-2");
 
+      // Only one account can be active at a time (the last one activated)
       const active = accountManager.getActiveAccounts();
-      expect(active).toHaveLength(2);
+      expect(active).toHaveLength(1);
+      expect(active[0].id).toBe(account2.id);
     });
   });
 

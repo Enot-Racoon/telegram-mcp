@@ -1,9 +1,9 @@
-import Database from "better-sqlite3";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { getConfig } from "~/core/config";
+import { initializeDatabase } from "~/core/database";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -14,13 +14,8 @@ async function runMigrations(): Promise<void> {
   const config = getConfig();
   const dbPath = config.databasePath;
 
-  // Ensure directory exists
-  const dbDir = path.dirname(dbPath);
-  if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
-  }
-
-  const db = new Database(dbPath);
+  const adapter = initializeDatabase(dbPath);
+  const db = adapter.getRawDatabase();
 
   try {
     // Read migration files - use project root
@@ -78,7 +73,7 @@ async function runMigrations(): Promise<void> {
 
     console.log("Migrations completed successfully");
   } finally {
-    db.close();
+    adapter.close();
   }
 }
 
