@@ -49,6 +49,28 @@ export class InMemoryAccountRepository implements AccountRepository {
     }
   }
 
+  setActiveExclusively(id: string): void {
+    // Deactivate all first
+    for (const session of this.sessions.values()) {
+      session.isActive = false;
+      this.sessions.set(session.id, session);
+    }
+    // Then activate the specified one
+    const session = this.sessions.get(id);
+    if (session) {
+      session.isActive = true;
+      this.sessions.set(id, session);
+    }
+  }
+
+  deactivateOne(id: string): void {
+    const session = this.sessions.get(id);
+    if (session) {
+      session.isActive = false;
+      this.sessions.set(id, session);
+    }
+  }
+
   deactivateAll(): void {
     for (const session of this.sessions.values()) {
       session.isActive = false;

@@ -92,19 +92,7 @@ export class AccountManager {
    * Deactivate a session
    */
   deactivateSession(id: string): void {
-    const session = this.accountRepository.findById(id);
-    if (session) {
-      // For single session deactivation, we need to update the session
-      // Since repository doesn't have deactivateOne, we'll use a workaround
-      const allSessions = this.accountRepository.getAll();
-      const othersActive = allSessions.filter((s) => s.id !== id && s.isActive);
-      
-      // Deactivate all and reactivate others if needed
-      this.accountRepository.deactivateAll();
-      for (const other of othersActive) {
-        this.accountRepository.setActive(other.id);
-      }
-    }
+    this.accountRepository.deactivateOne(id);
   }
 
   /**
@@ -178,11 +166,8 @@ export class AccountManager {
       return false;
     }
 
-    // Deactivate all accounts first
-    this.accountRepository.deactivateAll();
-
-    // Activate the selected account
-    this.accountRepository.setActive(id);
+    // Atomic operation: deactivate all and activate one
+    this.accountRepository.setActiveExclusively(id);
 
     return true;
   }

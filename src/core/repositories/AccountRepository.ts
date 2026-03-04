@@ -36,6 +36,16 @@ export interface AccountRepository {
   setActive(id: string): void;
 
   /**
+   * Deactivate all sessions and activate one (atomic operation)
+   */
+  setActiveExclusively(id: string): void;
+
+  /**
+   * Deactivate a specific session (atomic operation)
+   */
+  deactivateOne(id: string): void;
+
+  /**
    * Deactivate all sessions
    */
   deactivateAll(): void;

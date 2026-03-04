@@ -85,6 +85,17 @@ export class SqliteAccountRepository implements AccountRepository {
     this.adapter.run("UPDATE sessions SET is_active = 1 WHERE id = ?", [id]);
   }
 
+  setActiveExclusively(id: string): void {
+    this.adapter.transaction(() => {
+      this.deactivateAll();
+      this.setActive(id);
+    });
+  }
+
+  deactivateOne(id: string): void {
+    this.adapter.run("UPDATE sessions SET is_active = 0 WHERE id = ?", [id]);
+  }
+
   deactivateAll(): void {
     this.adapter.run("UPDATE sessions SET is_active = 0");
   }
