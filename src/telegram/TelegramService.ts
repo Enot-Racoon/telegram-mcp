@@ -81,7 +81,7 @@ export class TelegramService {
     chatId: string,
     options?: GetMessagesOptions & { limit?: number },
   ): Promise<Message[]> {
-    const resolvedChatId = await this.resolveChatId(chatId);
+    const resolvedChatId = await this.resolveChatRef(chatId);
     return this.provider.getMessages(resolvedChatId, options);
   }
 
@@ -94,14 +94,27 @@ export class TelegramService {
 
   /**
    * Resolve a chat reference to a chat ID
+   * Fast-path for raw IDs to avoid unnecessary provider calls
    */
-  private async resolveChatId(chatRef: string): Promise<string> {
-    // Try to resolve as chat reference first
+  private async resolveChatRef(chatRef: string): Promise<string> {
+    // Fast path: internal mock IDs (chat-1, chat-2, etc.)
+    if (chatRef.startsWith("chat-")) {
+      return chatRef;
+    }
+
+    // Fast path: numeric Telegram IDs (e.g., "123456789" or "-1001234567890")
+    if (/^-?\d+$/.test(chatRef)) {
+      return chatRef;
+    }
+
+    // Resolve usernames, links, titles, etc.
     const resolved = await this.provider.resolveChat(chatRef);
+
     if (resolved) {
       return resolved;
     }
-    // If not resolved, assume it's already a raw chat ID
+
+    // Fallback: assume caller passed a valid raw ID
     return chatRef;
   }
 
@@ -113,7 +126,7 @@ export class TelegramService {
     text: string,
     options?: SendMessageOptions,
   ): Promise<Message> {
-    const resolvedChatId = await this.resolveChatId(chatId);
+    const resolvedChatId = await this.resolveChatRef(chatId);
     return this.provider.sendMessage(resolvedChatId, text, options);
   }
 
@@ -125,7 +138,7 @@ export class TelegramService {
     replyToMessageId: string,
     text: string,
   ): Promise<Message> {
-    const resolvedChatId = await this.resolveChatId(chatId);
+    const resolvedChatId = await this.resolveChatRef(chatId);
     return this.provider.replyMessage(resolvedChatId, replyToMessageId, text);
   }
 
@@ -137,7 +150,7 @@ export class TelegramService {
     messageId: string,
     newText: string,
   ): Promise<Message> {
-    const resolvedChatId = await this.resolveChatId(chatId);
+    const resolvedChatId = await this.resolveChatRef(chatId);
     return this.provider.editMessage(resolvedChatId, messageId, newText);
   }
 
@@ -145,7 +158,7 @@ export class TelegramService {
    * Delete a message
    */
   async deleteMessage(chatId: string, messageId: string): Promise<boolean> {
-    const resolvedChatId = await this.resolveChatId(chatId);
+    const resolvedChatId = await this.resolveChatRef(chatId);
     return this.provider.deleteMessage(resolvedChatId, messageId);
   }
 
@@ -157,7 +170,7 @@ export class TelegramService {
     limit: number = 50,
   ): Promise<Message[]> {
     if (chatId) {
-      const resolvedChatId = await this.resolveChatId(chatId);
+      const resolvedChatId = await this.resolveChatRef(chatId);
       return this.provider.getUnreadMessages(resolvedChatId, limit);
     }
     return this.provider.getUnreadMessages(undefined, limit);
@@ -186,7 +199,7 @@ export class TelegramService {
    * Get detailed information about a chat
    */
   async getChatInfo(chatId: string): Promise<ChatInfo | null> {
-    const resolvedChatId = await this.resolveChatId(chatId);
+    const resolvedChatId = await this.resolveChatRef(chatId);
     return this.provider.getChatInfo(resolvedChatId);
   }
 
