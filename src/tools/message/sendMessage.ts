@@ -7,13 +7,17 @@ export const sendMessageTool: ToolWithHandler = {
   definition: {
     name: "send_message",
     description:
-      "Send a text message to a chat. Supports reply_to_message_id, parse_mode, and disable_link_preview options.",
+      "Send a text message to a chat. Supports reply_to_message_id, parse_mode, and disable_link_preview options. The chat parameter accepts chat IDs, @username, or t.me links.",
     inputSchema: {
       type: "object",
       properties: {
         chatId: {
           type: "string",
-          description: "The ID of the chat to send message to",
+          description: "The ID of the chat to send message to (deprecated: use 'chat' instead)",
+        },
+        chat: {
+          type: "string",
+          description: "Chat reference: chat ID, @username, username, or t.me link",
         },
         text: {
           type: "string",
@@ -33,21 +37,29 @@ export const sendMessageTool: ToolWithHandler = {
           description: "Optional: disable link preview generation",
         },
       },
-      required: ["chatId", "text"],
+      required: ["text"],
     },
   },
   handler: async (args, { telegramService }) => {
-    const chatId = args?.chatId as string;
+    const chatId = args?.chatId as string | undefined;
+    const chat = args?.chat as string | undefined;
     const text = args?.text as string;
     const replyToMessageId = args?.replyToMessageId as string | undefined;
     const parseMode = args?.parseMode as "markdown" | "html" | "none" | undefined;
     const disableLinkPreview = args?.disableLinkPreview as boolean | undefined;
 
-    if (!chatId || !text) {
-      throw new Error("chatId and text are required");
+    if (!text) {
+      throw new Error("text is required");
     }
 
-    const result = await telegramService.sendMessage(chatId, text, {
+    // Use chat if provided, otherwise fall back to chatId for backward compatibility
+    const targetChat = chat || chatId;
+
+    if (!targetChat) {
+      throw new Error("chat or chatId is required");
+    }
+
+    const result = await telegramService.sendMessage(targetChat, text, {
       replyToMessageId,
       parseMode,
       disableLinkPreview,

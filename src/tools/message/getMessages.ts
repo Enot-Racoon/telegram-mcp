@@ -7,13 +7,17 @@ export const getMessagesTool: ToolWithHandler = {
   definition: {
     name: "get_messages",
     description:
-      "Get messages from a specific chat. Supports pagination with limit, offset, before_id, after_id.",
+      "Get messages from a specific chat. Supports pagination with limit, offset, before_id, after_id. The chat parameter accepts chat IDs, @username, or t.me links.",
     inputSchema: {
       type: "object",
       properties: {
         chatId: {
           type: "string",
-          description: "The ID of the chat to get messages from",
+          description: "The ID of the chat to get messages from (deprecated: use 'chat' instead)",
+        },
+        chat: {
+          type: "string",
+          description: "Chat reference: chat ID, @username, username, or t.me link",
         },
         limit: {
           type: "number",
@@ -32,21 +36,25 @@ export const getMessagesTool: ToolWithHandler = {
           description: "Get messages after this message ID",
         },
       },
-      required: ["chatId"],
+      required: [],
     },
   },
   handler: async (args, { telegramService }) => {
-    const chatId = args?.chatId as string;
+    const chatId = args?.chatId as string | undefined;
+    const chat = args?.chat as string | undefined;
     const limit = args?.limit as number | undefined;
     const offset = args?.offset as number | undefined;
     const beforeId = args?.beforeId as string | undefined;
     const afterId = args?.afterId as string | undefined;
 
-    if (!chatId) {
-      throw new Error("chatId is required");
+    // Use chat if provided, otherwise fall back to chatId for backward compatibility
+    const targetChat = chat || chatId;
+
+    if (!targetChat) {
+      throw new Error("chat or chatId is required");
     }
 
-    const result = await telegramService.getMessages(chatId, {
+    const result = await telegramService.getMessages(targetChat, {
       limit,
       offset,
       beforeId,
@@ -59,7 +67,7 @@ export const getMessagesTool: ToolWithHandler = {
           type: "text",
           text: JSON.stringify(
             {
-              chatId,
+              chatId: targetChat,
               messages: result.map((msg) => ({
                 id: msg.id,
                 chatId: msg.chatId,
