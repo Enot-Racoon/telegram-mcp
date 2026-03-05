@@ -6,84 +6,34 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 
 import type { Config } from "~/types";
-import { Logger } from "~/core/logging";
-import { CacheManager } from "~/core/cache";
-import { AccountManager } from "~/accounts/AccountManager";
-import { MockTelegramProvider } from "~/telegram/MockTelegramProvider";
-import { TelegramService } from "~/telegram/TelegramService";
-import {
-  getDatabase,
-  closeDatabase,
-  initializeDatabase,
-  createInMemoryDatabase,
-  type BetterSqliteAdapter,
-} from "~/core/database";
-import {
-  SqliteAccountRepository,
-  SqliteCacheRepository,
-  SqliteLogRepository,
-  InMemoryAccountRepository,
-  InMemoryCacheRepository,
-  InMemoryLogRepository,
-  type AccountRepository,
-  type CacheRepository,
-  type LogRepository,
-} from "~/core/repositories";
+import type { Logger } from "~/core/logging";
+import type { CacheManager } from "~/core/cache";
+import type { AccountManager } from "~/accounts/AccountManager";
+import type { TelegramService } from "~/telegram/TelegramService";
+import type { BetterSqliteAdapter } from "~/core/database";
 import {
   getToolDefinitions,
   getToolHandler,
 } from "~/tools";
 
 /**
- * Database adapters factory
+ * TelegramMCPServer constructor options
+ * All dependencies are injected from the composition root
  */
-export class DatabaseAdapters {
-  static createSqlite(dbPath: string): {
-    adapter: BetterSqliteAdapter;
-    accountRepository: SqliteAccountRepository;
-    cacheRepository: SqliteCacheRepository;
-    logRepository: SqliteLogRepository;
-  } {
-    const adapter = initializeDatabase(dbPath);
-    
-    const accountRepository = new SqliteAccountRepository(adapter);
-    const cacheRepository = new SqliteCacheRepository(adapter);
-    const logRepository = new SqliteLogRepository(adapter);
-
-    return {
-      adapter,
-      accountRepository,
-      cacheRepository,
-      logRepository,
-    };
-  }
-
-  static createInMemory(): {
-    adapter: BetterSqliteAdapter;
-    accountRepository: InMemoryAccountRepository;
-    cacheRepository: InMemoryCacheRepository;
-    logRepository: InMemoryLogRepository;
-  } {
-    const adapter = createInMemoryDatabase();
-    
-    const accountRepository = new InMemoryAccountRepository();
-    const cacheRepository = new InMemoryCacheRepository();
-    const logRepository = new InMemoryLogRepository();
-
-    return {
-      adapter,
-      accountRepository,
-      cacheRepository,
-      logRepository,
-    };
-  }
+export interface TelegramMCPServerOptions {
+  config: Config;
+  logger: Logger;
+  cache: CacheManager;
+  accountManager: AccountManager;
+  telegramService: TelegramService;
+  adapter?: BetterSqliteAdapter;
 }
 
 /**
  * Telegram MCP Server
  *
  * This server provides MCP (Model Context Protocol) integration for Telegram.
- * Stage 1: Foundation with mock provider (no real Telegram integration).
+ * All dependencies are injected via constructor - no internal instantiation.
  */
 export class TelegramMCPServer {
   private server: Server;
@@ -95,45 +45,13 @@ export class TelegramMCPServer {
   private isRunning = false;
   private adapter: BetterSqliteAdapter | null = null;
 
-  constructor(
-    config: Config,
-    options?: {
-      useInMemory?: boolean;
-      accountRepository?: InMemoryAccountRepository;
-      cacheRepository?: InMemoryCacheRepository;
-      logRepository?: InMemoryLogRepository;
-    },
-  ) {
-    this.config = config;
-
-    // Initialize repositories
-    let accountRepo: AccountRepository;
-    let cacheRepo: CacheRepository;
-    let logRepo: LogRepository;
-
-    if (options?.useInMemory || (options?.accountRepository && options?.cacheRepository && options?.logRepository)) {
-      // Use provided in-memory repositories or create new ones
-      accountRepo = options.accountRepository ?? new InMemoryAccountRepository();
-      cacheRepo = options.cacheRepository ?? new InMemoryCacheRepository();
-      logRepo = options.logRepository ?? new InMemoryLogRepository();
-    } else {
-      // Use SQLite repositories
-      const db = getDatabase(config.databasePath);
-      this.adapter = db;
-
-      accountRepo = new SqliteAccountRepository(db);
-      cacheRepo = new SqliteCacheRepository(db);
-      logRepo = new SqliteLogRepository(db);
-    }
-
-    // Initialize components with repositories
-    this.logger = new Logger(logRepo, config.logLevel);
-    this.cache = new CacheManager(cacheRepo);
-    this.accountManager = new AccountManager(accountRepo);
-
-    // Initialize Telegram service with mock provider
-    const mockProvider = new MockTelegramProvider();
-    this.telegramService = new TelegramService(mockProvider);
+  constructor(options: TelegramMCPServerOptions) {
+    this.config = options.config;
+    this.logger = options.logger;
+    this.cache = options.cache;
+    this.accountManager = options.accountManager;
+    this.telegramService = options.telegramService;
+    this.adapter = options.adapter ?? null;
 
     // Initialize MCP server
     this.server = new Server(
@@ -284,9 +202,9 @@ export class TelegramMCPServer {
     });
 
     await this.server.close();
-    
+
     if (this.adapter) {
-      closeDatabase(this.adapter);
+      this.adapter.close();
     }
 
     this.isRunning = false;

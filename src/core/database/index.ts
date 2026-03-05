@@ -34,22 +34,3 @@ export function createInMemoryDatabase(): BetterSqliteAdapter {
 export function closeDatabase(adapter: BetterSqliteAdapter): void {
   adapter.close();
 }
-
-/**
- * Get the database instance (singleton pattern for production)
- */
-let adapterInstance: BetterSqliteAdapter | null = null;
-
-export function getDatabase(dbPath: string): BetterSqliteAdapter {
-  if (!adapterInstance) {
-    adapterInstance = initializeDatabase(dbPath);
-  }
-  return adapterInstance;
-}
-
-export function resetDatabaseInstance(): void {
-  if (adapterInstance) {
-    adapterInstance.close();
-    adapterInstance = null;
-  }
-}

@@ -15,7 +15,6 @@ async function runMigrations(): Promise<void> {
   const dbPath = config.databasePath;
 
   const adapter = initializeDatabase(dbPath);
-  const db = adapter.getRawDatabase();
 
   try {
     // Read migration files - use project root
@@ -40,19 +39,10 @@ async function runMigrations(): Promise<void> {
     }
 
     // Create migrations tracking table
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS __drizzle_migrations (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        hash TEXT NOT NULL,
-        created_at TEXT DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
+    adapter.ensureMigrationTable();
 
     // Get applied migrations
-    const applied = db
-      .prepare("SELECT hash FROM __drizzle_migrations")
-      .all() as { hash: string }[];
-    const appliedHashes = new Set(applied.map((m) => m.hash));
+    const appliedHashes = new Set(adapter.getAppliedMigrations());
 
     // Apply pending migrations
     for (const file of migrationFiles) {
@@ -64,10 +54,8 @@ async function runMigrations(): Promise<void> {
 
       if (!appliedHashes.has(hash)) {
         console.log(`Applying migration: ${file}`);
-        db.exec(sql);
-        db.prepare("INSERT INTO __drizzle_migrations (hash) VALUES (?)").run(
-          hash,
-        );
+        adapter.runMigrations(sql);
+        adapter.recordMigration(hash);
       }
     }
 

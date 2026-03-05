@@ -1,20 +1,44 @@
 import { describe, it, expect, beforeEach } from "vitest";
 
-import { TelegramMCPServer, DatabaseAdapters } from "~/server";
+import { TelegramMCPServer } from "~/server";
 import { getConfig } from "~/core/config";
+import {
+  InMemoryAccountRepository,
+  InMemoryCacheRepository,
+  InMemoryLogRepository,
+} from "~/core/repositories";
+import { Logger } from "~/core/logging";
+import { CacheManager } from "~/core/cache";
+import { AccountManager } from "~/accounts/AccountManager";
+import { ProviderFactory, TelegramService } from "~/telegram";
 
 describe("TelegramMCPServer", () => {
   let server: TelegramMCPServer;
 
   beforeEach(() => {
     const config = getConfig();
-    const adapters = DatabaseAdapters.createInMemory();
-    
-    server = new TelegramMCPServer(config, {
-      useInMemory: true,
-      accountRepository: adapters.accountRepository,
-      cacheRepository: adapters.cacheRepository,
-      logRepository: adapters.logRepository,
+
+    // Use in-memory repositories directly to avoid better-sqlite3 dependency
+    const accountRepo = new InMemoryAccountRepository();
+    const cacheRepo = new InMemoryCacheRepository();
+    const logRepo = new InMemoryLogRepository();
+
+    const logger = new Logger(logRepo, config.logLevel);
+    const cache = new CacheManager(cacheRepo);
+    const accountManager = new AccountManager(accountRepo);
+    const provider = ProviderFactory.create({
+      type: "mock",
+      mockDelayMs: 0,
+      mockSimulateError: false,
+    });
+    const telegramService = new TelegramService(provider);
+
+    server = new TelegramMCPServer({
+      config,
+      logger,
+      cache,
+      accountManager,
+      telegramService,
     });
   });
 

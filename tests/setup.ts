@@ -8,7 +8,6 @@ import type { BetterSqliteAdapter } from "~/core/database";
  * Apply migrations to a test database
  */
 export function applyMigrations(adapter: BetterSqliteAdapter): void {
-  const db = adapter.getRawDatabase();
   const migrationsDir = path.join(process.cwd(), "drizzle");
 
   if (!fs.existsSync(migrationsDir)) {
@@ -18,19 +17,10 @@ export function applyMigrations(adapter: BetterSqliteAdapter): void {
   }
 
   // Create migrations tracking table
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS __drizzle_migrations (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      hash TEXT NOT NULL,
-      created_at TEXT DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
+  adapter.ensureMigrationTable();
 
   // Get applied migrations
-  const applied = db
-    .prepare("SELECT hash FROM __drizzle_migrations")
-    .all() as { hash: string }[];
-  const appliedHashes = new Set(applied.map((m) => m.hash));
+  const appliedHashes = new Set(adapter.getAppliedMigrations());
 
   // Apply pending migrations
   const migrationFiles = fs
@@ -44,10 +34,8 @@ export function applyMigrations(adapter: BetterSqliteAdapter): void {
     if (!appliedHashes.has(hash)) {
       const filePath = path.join(migrationsDir, file);
       const sql = fs.readFileSync(filePath, "utf-8");
-      db.exec(sql);
-      db.prepare(
-        "INSERT INTO __drizzle_migrations (hash) VALUES (?)",
-      ).run(hash);
+      adapter.runMigrations(sql);
+      adapter.recordMigration(hash);
     }
   }
 }

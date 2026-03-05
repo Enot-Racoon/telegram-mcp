@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { TelegramMCPServer } from "~/server";
 import { getConfig, ensureDatabaseDirectory } from "~/core/config";
+import { startServer } from "~/bootstrap";
 
 /**
  * Print help message
@@ -25,7 +25,7 @@ Environment Variables:
 
 Description:
   This MCP server provides Telegram integration for AI assistants.
-  
+
   Stage 1 (Foundation):
   - Mock Telegram provider (no real API calls)
   - SQLite storage for sessions, cache, and logs
@@ -72,8 +72,12 @@ async function main(): Promise<void> {
   const config = getConfig();
   ensureDatabaseDirectory(config.databasePath);
 
-  // Create and start server
-  const server = new TelegramMCPServer(config);
+  // Start server using composition root
+  const { server } = await startServer({
+    config,
+    useInMemory: false,
+    providerType: "mock",
+  });
 
   // Handle graceful shutdown
   const shutdown = async (signal: string): Promise<void> => {
@@ -90,13 +94,6 @@ async function main(): Promise<void> {
 
   process.on("SIGINT", () => shutdown("SIGINT"));
   process.on("SIGTERM", () => shutdown("SIGTERM"));
-
-  try {
-    await server.start();
-  } catch (error) {
-    console.error("Failed to start server:", error);
-    process.exit(1);
-  }
 }
 
 // Run main

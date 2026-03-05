@@ -5,7 +5,11 @@ import { Logger } from "~/core/logging";
 import { AccountManager } from "~/accounts/AccountManager";
 import { TelegramService } from "~/telegram/TelegramService";
 import { MockTelegramProvider } from "~/telegram/MockTelegramProvider";
-import { DatabaseAdapters } from "~/server";
+import {
+  InMemoryAccountRepository,
+  InMemoryCacheRepository,
+  InMemoryLogRepository,
+} from "~/core/repositories";
 
 /**
  * Integration tests for the complete system
@@ -16,13 +20,15 @@ describe("Integration Tests", () => {
   let logger: Logger;
   let accountManager: AccountManager;
   let telegramService: TelegramService;
-  let adapters: ReturnType<typeof DatabaseAdapters.createInMemory>;
 
   beforeEach(() => {
-    adapters = DatabaseAdapters.createInMemory();
-    cache = new CacheManager(adapters.cacheRepository);
-    logger = new Logger(adapters.logRepository, "debug");
-    accountManager = new AccountManager(adapters.accountRepository);
+    const accountRepo = new InMemoryAccountRepository();
+    const cacheRepo = new InMemoryCacheRepository();
+    const logRepo = new InMemoryLogRepository();
+
+    cache = new CacheManager(cacheRepo);
+    logger = new Logger(logRepo, "debug");
+    accountManager = new AccountManager(accountRepo);
     telegramService = new TelegramService(
       new MockTelegramProvider({ delayMs: 0 }),
     );

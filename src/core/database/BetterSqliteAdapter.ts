@@ -55,16 +55,68 @@ export class BetterSqliteAdapter implements DatabaseAdapter {
   }
 
   /**
-   * Get the underlying database instance (for migrations)
-   */
-  getRawDatabase(): Database.Database {
-    return this.db;
-  }
-
-  /**
    * Set a custom close function
    */
   setCloseFn(fn: () => void): void {
     this.closeFn = fn;
+  }
+
+  /**
+   * Run migrations - internal method for infrastructure use only
+   * This method is package-private and should only be called from migrate.ts
+   */
+  runMigrations(migrationSql: string): void {
+    this.db.exec(migrationSql);
+  }
+
+  /**
+   * Check if migration table exists - internal method for infrastructure use only
+   */
+  hasMigrationTable(): boolean {
+    try {
+      const result = this.db
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='__drizzle_migrations'",
+        )
+        .get();
+      return !!result;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Create migration tracking table - internal method for infrastructure use only
+   */
+  ensureMigrationTable(): void {
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS __drizzle_migrations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        hash TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+  }
+
+  /**
+   * Get applied migration hashes - internal method for infrastructure use only
+   */
+  getAppliedMigrations(): string[] {
+    if (!this.hasMigrationTable()) {
+      return [];
+    }
+    const rows = this.db
+      .prepare("SELECT hash FROM __drizzle_migrations")
+      .all() as { hash: string }[];
+    return rows.map((r) => r.hash);
+  }
+
+  /**
+   * Record a migration as applied - internal method for infrastructure use only
+   */
+  recordMigration(hash: string): void {
+    this.db
+      .prepare("INSERT INTO __drizzle_migrations (hash) VALUES (?)")
+      .run(hash);
   }
 }
