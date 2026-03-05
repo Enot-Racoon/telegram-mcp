@@ -1,15 +1,21 @@
 import type { Chat, Message, ChatInfo, User } from "~/types";
 
 import type { TelegramProvider, GetMessagesOptions, SearchMessagesOptions, SendMessageOptions, ConnectionStatus, Participant, SubscriptionState, WaitForMessageOptions } from "./TelegramProvider";
+import { TelegramExecutor } from "./TelegramExecutor";
 
 /**
  * Telegram service that wraps the provider with additional functionality
  */
 export class TelegramService {
   private provider: TelegramProvider;
+  private executor: TelegramExecutor;
 
-  constructor(provider: TelegramProvider) {
+  constructor(
+    provider: TelegramProvider,
+    executor?: TelegramExecutor,
+  ) {
     this.provider = provider;
+    this.executor = executor ?? new TelegramExecutor();
   }
 
   /**
@@ -19,14 +25,14 @@ export class TelegramService {
     if (!phone || typeof phone !== "string") {
       throw new Error("phone is required and must be a string");
     }
-    await this.provider.login(phone);
+    await this.executor.execute(() => this.provider.login(phone));
   }
 
   /**
    * Logout from Telegram
    */
   async logout(): Promise<void> {
-    await this.provider.logout();
+    await this.executor.execute(() => this.provider.logout());
   }
 
   /**
@@ -43,7 +49,7 @@ export class TelegramService {
     type?: "private" | "group" | "channel";
     unreadOnly?: boolean;
   }): Promise<Chat[]> {
-    const chats = await this.provider.listChats();
+    const chats = await this.executor.execute(() => this.provider.listChats());
 
     if (!options) {
       return chats;
@@ -64,14 +70,14 @@ export class TelegramService {
    * Search chats by name or username
    */
   async searchChats(query: string, limit: number = 20): Promise<Chat[]> {
-    return this.provider.searchChats(query, limit);
+    return this.executor.execute(() => this.provider.searchChats(query, limit));
   }
 
   /**
    * Resolve a chat reference to chat_id
    */
   async resolveChat(ref: string): Promise<string | null> {
-    return this.provider.resolveChat(ref);
+    return this.executor.execute(() => this.provider.resolveChat(ref));
   }
 
   /**
@@ -82,14 +88,18 @@ export class TelegramService {
     options?: GetMessagesOptions & { limit?: number },
   ): Promise<Message[]> {
     const resolvedChatId = await this.resolveChatRef(chatId);
-    return this.provider.getMessages(resolvedChatId, options);
+    return this.executor.execute(() =>
+      this.provider.getMessages(resolvedChatId, options),
+    );
   }
 
   /**
    * Search messages by text
    */
   async searchMessages(options: SearchMessagesOptions): Promise<Message[]> {
-    return this.provider.searchMessages(options);
+    return this.executor.execute(() =>
+      this.provider.searchMessages(options),
+    );
   }
 
   /**
@@ -127,7 +137,9 @@ export class TelegramService {
     options?: SendMessageOptions,
   ): Promise<Message> {
     const resolvedChatId = await this.resolveChatRef(chatId);
-    return this.provider.sendMessage(resolvedChatId, text, options);
+    return this.executor.execute(() =>
+      this.provider.sendMessage(resolvedChatId, text, options),
+    );
   }
 
   /**
@@ -139,7 +151,9 @@ export class TelegramService {
     text: string,
   ): Promise<Message> {
     const resolvedChatId = await this.resolveChatRef(chatId);
-    return this.provider.replyMessage(resolvedChatId, replyToMessageId, text);
+    return this.executor.execute(() =>
+      this.provider.replyMessage(resolvedChatId, replyToMessageId, text),
+    );
   }
 
   /**
@@ -151,7 +165,9 @@ export class TelegramService {
     newText: string,
   ): Promise<Message> {
     const resolvedChatId = await this.resolveChatRef(chatId);
-    return this.provider.editMessage(resolvedChatId, messageId, newText);
+    return this.executor.execute(() =>
+      this.provider.editMessage(resolvedChatId, messageId, newText),
+    );
   }
 
   /**
@@ -159,7 +175,9 @@ export class TelegramService {
    */
   async deleteMessage(chatId: string, messageId: string): Promise<boolean> {
     const resolvedChatId = await this.resolveChatRef(chatId);
-    return this.provider.deleteMessage(resolvedChatId, messageId);
+    return this.executor.execute(() =>
+      this.provider.deleteMessage(resolvedChatId, messageId),
+    );
   }
 
   /**
@@ -171,9 +189,13 @@ export class TelegramService {
   ): Promise<Message[]> {
     if (chatId) {
       const resolvedChatId = await this.resolveChatRef(chatId);
-      return this.provider.getUnreadMessages(resolvedChatId, limit);
+      return this.executor.execute(() =>
+        this.provider.getUnreadMessages(resolvedChatId, limit),
+      );
     }
-    return this.provider.getUnreadMessages(undefined, limit);
+    return this.executor.execute(() =>
+      this.provider.getUnreadMessages(undefined, limit),
+    );
   }
 
   /**
@@ -184,14 +206,16 @@ export class TelegramService {
     afterMessageId: string,
     limit: number = 50,
   ): Promise<Message[]> {
-    return this.provider.getUpdatesSince(chatId, afterMessageId, limit);
+    return this.executor.execute(() =>
+      this.provider.getUpdatesSince(chatId, afterMessageId, limit),
+    );
   }
 
   /**
    * Get chat by ID
    */
   async getChat(chatId: string): Promise<Chat | null> {
-    const chats = await this.provider.listChats();
+    const chats = await this.executor.execute(() => this.provider.listChats());
     return chats.find((chat) => chat.id === chatId) || null;
   }
 
@@ -200,97 +224,117 @@ export class TelegramService {
    */
   async getChatInfo(chatId: string): Promise<ChatInfo | null> {
     const resolvedChatId = await this.resolveChatRef(chatId);
-    return this.provider.getChatInfo(resolvedChatId);
+    return this.executor.execute(() =>
+      this.provider.getChatInfo(resolvedChatId),
+    );
   }
 
   /**
    * Get unread messages count across all chats
    */
   async getUnreadCount(): Promise<number> {
-    return this.provider.getUnreadCount();
+    return this.executor.execute(() => this.provider.getUnreadCount());
   }
 
   /**
    * Get user info by ID
    */
   async getUserInfo(userId: string): Promise<User | null> {
-    return this.provider.getUserInfo(userId);
+    return this.executor.execute(() => this.provider.getUserInfo(userId));
   }
 
   /**
    * List chats sorted by last message time
    */
   async listRecentChats(limit: number = 50): Promise<Chat[]> {
-    return this.provider.listRecentChats(limit);
+    return this.executor.execute(() => this.provider.listRecentChats(limit));
   }
 
   /**
    * Get paginated dialogs
    */
   async getDialogsPage(offset: number = 0, limit: number = 20) {
-    return this.provider.getDialogsPage(offset, limit);
+    return this.executor.execute(() =>
+      this.provider.getDialogsPage(offset, limit),
+    );
   }
 
   /**
    * Get the last message from a chat
    */
   async getLastMessage(chatId: string): Promise<Message | null> {
-    return this.provider.getLastMessage(chatId);
+    return this.executor.execute(() => this.provider.getLastMessage(chatId));
   }
 
   /**
    * Get connection status
    */
   async getConnectionStatus(): Promise<ConnectionStatus> {
-    return this.provider.getConnectionStatus();
+    return this.executor.execute(() => this.provider.getConnectionStatus());
   }
 
   /**
    * Send message to Saved Messages
    */
   async sendToSavedMessages(text: string): Promise<Message> {
-    return this.provider.sendToSavedMessages(text);
+    return this.executor.execute(() => this.provider.sendToSavedMessages(text));
   }
 
   /**
    * Get participants of a group/channel
    */
-  async getParticipants(chatId: string, limit: number = 100, offset: number = 0) {
-    return this.provider.getParticipants(chatId, limit, offset);
+  async getParticipants(
+    chatId: string,
+    limit: number = 100,
+    offset: number = 0,
+  ): Promise<{ participants: Participant[]; total: number }> {
+    return this.executor.execute(() =>
+      this.provider.getParticipants(chatId, limit, offset),
+    );
   }
 
   /**
    * Resolve peer reference to chat_id
    */
   async resolvePeer(ref: string): Promise<string | null> {
-    return this.provider.resolvePeer(ref);
+    return this.executor.execute(() => this.provider.resolvePeer(ref));
   }
 
   /**
    * Subscribe to chat for new messages
    */
   async subscribeToChat(chatId: string): Promise<SubscriptionState> {
-    return this.provider.subscribeToChat(chatId);
+    return this.executor.execute(() =>
+      this.provider.subscribeToChat(chatId),
+    );
   }
 
   /**
    * Unsubscribe from chat
    */
   async unsubscribeFromChat(chatId: string): Promise<boolean> {
-    return this.provider.unsubscribeFromChat(chatId);
+    return this.executor.execute(() =>
+      this.provider.unsubscribeFromChat(chatId),
+    );
   }
 
   /**
    * Get active subscriptions
    */
   async getActiveSubscriptions(): Promise<SubscriptionState[]> {
-    return this.provider.getActiveSubscriptions();
+    return this.executor.execute(() =>
+      this.provider.getActiveSubscriptions(),
+    );
   }
 
   /**
    * Wait for new message
    */
-  async waitForNewMessage(options?: WaitForMessageOptions): Promise<Message | null> {
-    return this.provider.waitForNewMessage(options);
+  async waitForNewMessage(
+    options?: WaitForMessageOptions,
+  ): Promise<Message | null> {
+    return this.executor.execute(() =>
+      this.provider.waitForNewMessage(options),
+    );
   }
 }

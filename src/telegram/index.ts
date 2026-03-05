@@ -2,4 +2,5 @@ export type { TelegramProvider, UserInfo, GetMessagesOptions, SearchMessagesOpti
 export { ProviderFactory } from "./ProviderFactory";
 export type { ProviderType, ProviderFactoryOptions } from "./ProviderFactory";
 export { TelegramService } from "./TelegramService";
+export { TelegramExecutor } from "./TelegramExecutor";
 export { MockTelegramProvider } from "./MockTelegramProvider";

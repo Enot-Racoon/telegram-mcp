@@ -19,6 +19,7 @@ import {
   ProviderFactory,
   type ProviderType,
   TelegramService,
+  TelegramExecutor,
 } from "~/telegram";
 import { TelegramMCPServer } from "~/server";
 
@@ -85,10 +86,13 @@ export function composeRoot(options: BootstrapOptions): CompositionRoot {
     mockSimulateError: false,
   });
 
-  // 4. Create Telegram service
-  const telegramService = new TelegramService(provider);
+  // 4. Create Telegram executor for retry/flood-wait handling
+  const executor = new TelegramExecutor();
 
-  // 5. Create MCP server with all dependencies injected
+  // 5. Create Telegram service
+  const telegramService = new TelegramService(provider, executor);
+
+  // 6. Create MCP server with all dependencies injected
   const server = new TelegramMCPServer({
     config,
     logger,
